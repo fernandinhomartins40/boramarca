@@ -1,0 +1,35 @@
+{
+  "name": "boramarca",
+  "private": true,
+  "packageManager": "pnpm@10.28.0",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "typecheck": "pnpm -r --no-bail typecheck",
+    "lint": "pnpm -r --no-bail lint",
+    "test": "pnpm -r --no-bail test",
+    "build": "pnpm -r build",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "dev:infra": "docker compose -p boramarca -f infra/docker-compose.yml up -d --wait",
+    "down:infra": "docker compose -p boramarca -f infra/docker-compose.yml down",
+    "db:migrate": "pnpm --filter @boramarca/api db:migrate",
+    "db:seed": "pnpm --filter @boramarca/api db:seed",
+    "eval": "pnpm --filter @boramarca/ia eval"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@next/eslint-plugin-next": "16.4.6",
+    "@types/node": "^24.19.2",
+    "eslint": "^10.14.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.14.0",
+    "prettier": "^3.10.1",
+    "tsx": "^4.23.15",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.72.2",
+    "vitest": "^5.1.0"
+  }
+}

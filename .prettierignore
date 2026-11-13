@@ -1,0 +1,11 @@
+Bora-Marca-Kit/
+Bora-Marca-pacote-completo/
+docs/
+pnpm-lock.yaml
+**/.next/
+**/.expo/
+**/android/
+**/ios/
+**/dist/
+**/drizzle/meta/
+apps/web/app/theme.css

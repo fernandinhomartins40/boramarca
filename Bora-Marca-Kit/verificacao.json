@@ -1,0 +1,12 @@
+{
+  "visualFiles": 199,
+  "generatedAssetCount": 18,
+  "checks": [
+    "alpha real nos recortes",
+    "maior lado 3840px nos masters",
+    "dimensoes exatas Google/Apple",
+    "icone Google <=1MB",
+    "logos vetoriais renderizaveis"
+  ],
+  "errors": []
+}

@@ -1,0 +1,135 @@
+/* GERADO por scripts/gen-theme.ts a partir de @boramarca/shared/theme. Não edite à mão. */
+
+/* Only design tokens exist as colors: Tailwind's default palette is removed. */
+@theme {
+  --color-*: initial;
+  --radius-*: initial;
+  --text-*: initial;
+  --color-transparent: transparent;
+  --color-current: currentColor;
+  --color-brand-violeta: #7138F5;
+  --color-brand-lima: #D9FC60;
+  --color-brand-grafite: #191624;
+  --color-brand-neutro: #F8F7FC;
+  --color-brand-branco: #FFFFFF;
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 24px;
+  --radius-pill: 999px;
+  --text-display: 2rem;
+  --text-display--line-height: 2.375rem;
+  --text-display--font-weight: 700;
+  --text-title: 1.5rem;
+  --text-title--line-height: 1.875rem;
+  --text-title--font-weight: 700;
+  --text-heading: 1.25rem;
+  --text-heading--line-height: 1.625rem;
+  --text-heading--font-weight: 600;
+  --text-body: 1.0625rem;
+  --text-body--line-height: 1.5rem;
+  --text-body--font-weight: 400;
+  --text-body-small: 0.9375rem;
+  --text-body-small--line-height: 1.3125rem;
+  --text-body-small--font-weight: 400;
+  --text-caption: 0.8125rem;
+  --text-caption--line-height: 1.125rem;
+  --text-caption--font-weight: 500;
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 12px;
+  --spacing-lg: 16px;
+  --spacing-xl: 24px;
+  --spacing-xxl: 32px;
+  --spacing-xxxl: 48px;
+  --container-bora: 76rem;
+}
+
+/* Semantic tokens switch with the color scheme. */
+@theme inline {
+  --font-sans: var(--font-inter), system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --color-bg: var(--bm-bg);
+  --color-surface: var(--bm-surface);
+  --color-surface-alt: var(--bm-surface-alt);
+  --color-text: var(--bm-text);
+  --color-text-muted: var(--bm-text-muted);
+  --color-primary: var(--bm-primary);
+  --color-on-primary: var(--bm-on-primary);
+  --color-primary-text: var(--bm-primary-text);
+  --color-accent: var(--bm-accent);
+  --color-on-accent: var(--bm-on-accent);
+  --color-accent-soft: var(--bm-accent-soft);
+  --color-success: var(--bm-success);
+  --color-on-success: var(--bm-on-success);
+  --color-warning: var(--bm-warning);
+  --color-on-warning: var(--bm-on-warning);
+  --color-danger: var(--bm-danger);
+  --color-on-danger: var(--bm-on-danger);
+  --color-border: var(--bm-border);
+}
+
+:root {
+  --bora-gutter: clamp(1.25rem, 4vw, 4rem);
+  --bora-radius: clamp(1.25rem, 2vw, 2rem);
+  --bm-bg: #F8F7FC;
+  --bm-surface: #FFFFFF;
+  --bm-surface-alt: #EFECF8;
+  --bm-text: #191624;
+  --bm-text-muted: #5F5A70;
+  --bm-primary: #7138F5;
+  --bm-on-primary: #FFFFFF;
+  --bm-primary-text: #7138F5;
+  --bm-accent: #D9FC60;
+  --bm-on-accent: #191624;
+  --bm-accent-soft: #F1FDD0;
+  --bm-success: #D9FC60;
+  --bm-on-success: #191624;
+  --bm-warning: #F5A524;
+  --bm-on-warning: #191624;
+  --bm-danger: #C8283F;
+  --bm-on-danger: #FFFFFF;
+  --bm-border: #E2DEEE;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bm-bg: #191624;
+    --bm-surface: #231F30;
+    --bm-surface-alt: #2E2940;
+    --bm-text: #F8F7FC;
+    --bm-text-muted: #B4AFC4;
+    --bm-primary: #7138F5;
+    --bm-on-primary: #FFFFFF;
+    --bm-primary-text: #A98BFA;
+    --bm-accent: #D9FC60;
+    --bm-on-accent: #191624;
+    --bm-accent-soft: #2F3518;
+    --bm-success: #D9FC60;
+    --bm-on-success: #191624;
+    --bm-warning: #F5A524;
+    --bm-on-warning: #191624;
+    --bm-danger: #FF8A9B;
+    --bm-on-danger: #191624;
+    --bm-border: #3A3548;
+  }
+}
+
+[data-theme='dark'] {
+  --bm-bg: #191624;
+  --bm-surface: #231F30;
+  --bm-surface-alt: #2E2940;
+  --bm-text: #F8F7FC;
+  --bm-text-muted: #B4AFC4;
+  --bm-primary: #7138F5;
+  --bm-on-primary: #FFFFFF;
+  --bm-primary-text: #A98BFA;
+  --bm-accent: #D9FC60;
+  --bm-on-accent: #191624;
+  --bm-accent-soft: #2F3518;
+  --bm-success: #D9FC60;
+  --bm-on-success: #191624;
+  --bm-warning: #F5A524;
+  --bm-on-warning: #191624;
+  --bm-danger: #FF8A9B;
+  --bm-on-danger: #191624;
+  --bm-border: #3A3548;
+}

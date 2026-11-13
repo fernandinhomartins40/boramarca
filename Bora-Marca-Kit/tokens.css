@@ -1,0 +1,10 @@
+:root {
+  --bora-violeta: #7138f5;
+  --bora-lima: #d9fc60;
+  --bora-grafite: #191624;
+  --bora-neutro: #f8f7fc;
+  --bora-font: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --bora-container: 76rem;
+  --bora-gutter: clamp(1.25rem, 4vw, 4rem);
+  --bora-radius: clamp(1.25rem, 2vw, 2rem);
+}

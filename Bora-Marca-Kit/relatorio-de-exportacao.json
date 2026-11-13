@@ -1,0 +1,298 @@
+[
+  {
+    "id": "01-hero-completo",
+    "source": "exec-728e922e-eb88-403d-bf6f-098f95716c19.png",
+    "native": [
+      1672,
+      941
+    ],
+    "requestedAlpha": true,
+    "hasAlpha": true,
+    "export4k": [
+      3840,
+      2161
+    ],
+    "enlarged": true,
+    "alphaZero": 736005,
+    "alphaSemi": 835825
+  },
+  {
+    "id": "05-kit-voz-completo",
+    "source": "exec-ebd92cba-743b-4d29-9c0c-25ea2b51b370.png",
+    "native": [
+      1536,
+      1024
+    ],
+    "requestedAlpha": true,
+    "hasAlpha": true,
+    "export4k": [
+      3840,
+      2560
+    ],
+    "enlarged": true,
+    "alphaZero": 858040,
+    "alphaSemi": 714824
+  },
+  {
+    "id": "02-celular-agenda",
+    "source": "exec-de51ea6a-a4ba-477c-a553-df940f760f9e.png",
+    "native": [
+      852,
+      1846
+    ],
+    "requestedAlpha": true,
+    "hasAlpha": true,
+    "export4k": [
+      1772,
+      3840
+    ],
+    "enlarged": true,
+    "alphaZero": 335388,
+    "alphaSemi": 1235188
+  },
+  {
+    "id": "06-celular-modo-voz",
+    "source": "exec-78b568a7-b222-4d83-8603-7a57f4e18729.png",
+    "native": [
+      893,
+      1760
+    ],
+    "requestedAlpha": true,
+    "hasAlpha": true,
+    "export4k": [
+      1948,
+      3840
+    ],
+    "enlarged": true,
+    "alphaZero": 527913,
+    "alphaSemi": 1042928
+  },
+  {
+    "id": "03-placa-fluxo-transparente",
+    "source": "exec-3de5a4df-acac-4b97-92e2-825c781c5668.png",
+    "native": [
+      1774,
+      887
+    ],
+    "requestedAlpha": true,
+    "hasAlpha": true,
+    "export4k": [
+      3840,
+      1920
+    ],
+    "enlarged": true,
+    "alphaZero": 669080,
+    "alphaSemi": 903934
+  },
+  {
+    "id": "04-balao-confirmacao",
+    "source": "exec-a1eaf0d7-09e7-448f-b1a3-383ea0fbe9a0.png",
+    "native": [
+      1536,
+      1024
+    ],
+    "requestedAlpha": true,
+    "hasAlpha": true,
+    "export4k": [
+      3840,
+      2560
+    ],
+    "enlarged": true,
+    "alphaZero": 540126,
+    "alphaSemi": 1032738
+  },
+  {
+    "id": "07-caixa-bluetooth",
+    "source": "exec-d6b7e600-9e39-47cd-be5f-ea02d07ce960.png",
+    "native": [
+      1448,
+      1086
+    ],
+    "requestedAlpha": true,
+    "hasAlpha": true,
+    "export4k": [
+      3840,
+      2880
+    ],
+    "enlarged": true,
+    "alphaZero": 785286,
+    "alphaSemi": 786992
+  },
+  {
+    "id": "10-permissoes-ia",
+    "source": "exec-e4943e9c-7f0c-4095-9bef-f80edda599a8.png",
+    "native": [
+      1774,
+      887
+    ],
+    "requestedAlpha": true,
+    "hasAlpha": true,
+    "export4k": [
+      3840,
+      1920
+    ],
+    "enlarged": true,
+    "alphaZero": 369868,
+    "alphaSemi": 1202472
+  },
+  {
+    "id": "08-onda-de-voz",
+    "source": "exec-15d5ed4d-9f58-4c87-8f65-76a1e521ec8c.png",
+    "native": [
+      2172,
+      724
+    ],
+    "requestedAlpha": true,
+    "hasAlpha": true,
+    "export4k": [
+      3840,
+      1280
+    ],
+    "enlarged": true,
+    "alphaZero": 635866,
+    "alphaSemi": 936300
+  },
+  {
+    "id": "11-google-play-destaque",
+    "source": "exec-2be9eee6-5c25-4cf8-8400-4ac0c0e8a14a.png",
+    "native": [
+      1774,
+      887
+    ],
+    "requestedAlpha": false,
+    "hasAlpha": false,
+    "export4k": [
+      3840,
+      1920
+    ],
+    "enlarged": true
+  },
+  {
+    "id": "09-fluxo-whatsapp",
+    "source": "exec-c147faeb-a73b-4900-bbc1-01fc82771e1d.png",
+    "native": [
+      2172,
+      724
+    ],
+    "requestedAlpha": true,
+    "hasAlpha": true,
+    "export4k": [
+      3840,
+      1280
+    ],
+    "enlarged": true,
+    "alphaZero": 986837,
+    "alphaSemi": 583507
+  },
+  {
+    "id": "12-app-store-cabecalho",
+    "source": "exec-f15dfa1c-07e5-49fb-912e-685c78d14528.png",
+    "native": [
+      1914,
+      822
+    ],
+    "requestedAlpha": false,
+    "hasAlpha": false,
+    "export4k": [
+      3840,
+      1649
+    ],
+    "enlarged": true
+  },
+  {
+    "id": "13-lojas-agenda",
+    "source": "exec-b72787e9-5e36-45b0-8af9-fd9a8aba9f06.png",
+    "native": [
+      853,
+      1844
+    ],
+    "requestedAlpha": false,
+    "hasAlpha": false,
+    "export4k": [
+      1776,
+      3840
+    ],
+    "enlarged": true
+  },
+  {
+    "id": "14-lojas-conversas",
+    "source": "exec-044f47f2-f674-404d-9d7f-fbf37b0b0691.png",
+    "native": [
+      852,
+      1846
+    ],
+    "requestedAlpha": false,
+    "hasAlpha": false,
+    "export4k": [
+      1772,
+      3840
+    ],
+    "enlarged": true
+  },
+  {
+    "id": "15-lojas-decisoes",
+    "source": "exec-54dff567-2496-425d-afbc-c525853f2e61.png",
+    "native": [
+      852,
+      1846
+    ],
+    "requestedAlpha": false,
+    "hasAlpha": false,
+    "export4k": [
+      1772,
+      3840
+    ],
+    "enlarged": true
+  },
+  {
+    "id": "16-palco-violeta",
+    "source": "exec-3027f1a2-fb5e-40e3-8fcf-7c659eec9e31.png",
+    "native": [
+      2164,
+      727
+    ],
+    "export4k": [
+      3840,
+      1290
+    ],
+    "enlarged": true,
+    "requestedAlpha": true,
+    "hasAlpha": true,
+    "alphaZero": 1000431,
+    "alphaSemi": 571992
+  },
+  {
+    "id": "18-card-conversas",
+    "source": "exec-a975024f-398c-4dad-a9f4-fad563ec9b56.png",
+    "native": [
+      1536,
+      1024
+    ],
+    "export4k": [
+      3840,
+      2560
+    ],
+    "enlarged": true,
+    "requestedAlpha": true,
+    "hasAlpha": true,
+    "alphaZero": 969439,
+    "alphaSemi": 603425
+  },
+  {
+    "id": "17-card-proximo-atendimento",
+    "source": "exec-aa840ed0-ae65-483a-b69d-a73b1a99d45b.png",
+    "native": [
+      1774,
+      887
+    ],
+    "export4k": [
+      3840,
+      1920
+    ],
+    "enlarged": true,
+    "requestedAlpha": true,
+    "hasAlpha": true,
+    "alphaZero": 770409,
+    "alphaSemi": 800534
+  }
+]

@@ -1,0 +1,18 @@
+packages:
+  - apps/*
+  - packages/*
+
+# Hoisted (flat node_modules): React Native autolinking, Gradle and some native
+# libs (Picovoice) expect packages at node_modules/<name>; it also avoids the
+# long .pnpm/... paths that break Android builds on Windows (260-char limit).
+# Expo SDK 54+ supports isolated installs, but hoisted is the documented fallback.
+nodeLinker: hoisted
+
+# Native/install scripts allowed to run (pnpm 10 blocks them by default).
+onlyBuiltDependencies:
+  - '@parcel/watcher'
+  - '@tailwindcss/oxide'
+  - esbuild
+  - msgpackr-extract
+  - sharp
+  - unrs-resolver
