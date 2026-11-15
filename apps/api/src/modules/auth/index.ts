@@ -6,6 +6,7 @@ import { AppError, notFound } from '../../lib/errors';
 import { route } from '../../lib/route';
 import { wire } from '../../lib/serialize';
 import { deleteAccount } from './account';
+import { verifyLogin } from './login';
 import { consumeOtp, requestOtp } from './otp';
 
 /** GET /me payload; also used after PATCH. */
@@ -41,25 +42,10 @@ const auth: FastifyPluginAsync = async (app) => {
     app,
     a.otpVerify,
     async (req) => {
-      const { phone, code } = req.body;
-      await consumeOtp(app.db, app.config, phone, code, 'login');
-      let [p] = await app.db.select().from(professionals).where(eq(professionals.phone, phone));
-      const isNewUser = !p;
-      if (!p) {
-        // First login: a salon of one, owned by this professional. The quick sign-up fills it in.
-        p = await app.db.transaction(async (tx) => {
-          const [s] = await tx.insert(salons).values({ name: 'Meu espaço' }).returning();
-          const [created] = await tx
-            .insert(professionals)
-            .values({ salonId: s!.id, role: 'owner', name: 'Profissional', phone })
-            .onConflictDoNothing({ target: professionals.phone })
-            .returning();
-          if (!created) throw new AppError(409, 'CONFLICT', 'Tente de novo');
-          return created;
-        });
-      }
-      const tokens = app.issueTokens({ professionalId: p.id, salonId: p.salonId, role: p.role });
-      return { ...tokens, isNewUser };
+      const { scope, isNewUser } = await verifyLogin(app, req.body.phone, req.body.code, {
+        createAccount: true,
+      });
+      return { ...app.issueTokens(scope), isNewUser };
     },
     otpLimit,
   );

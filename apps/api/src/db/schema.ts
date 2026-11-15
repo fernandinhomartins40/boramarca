@@ -434,3 +434,55 @@ export const accountDeletions = pgTable('account_deletions', {
   completedAt: ts('completed_at'),
   origin: accountDeletionOriginEnum('origin').notNull(),
 });
+
+// ---- Alexa (plan section 14): settings per professional and account linking (OAuth 2.0 + PKCE).
+// Codes and tokens are stored only as SHA-256 hashes; the Voice Monkey token is AES-GCM encrypted.
+
+export const alexaSettings = pgTable('alexa_settings', {
+  professionalId: uuid('professional_id')
+    .primaryKey()
+    .references(() => professionals.id, { onDelete: 'cascade' }),
+  voiceMonkeyEnabled: boolean('voice_monkey_enabled').notNull().default(false),
+  voiceMonkeyDevice: text('voice_monkey_device'),
+  /** `lib/secret-box.ts` output; never returned by the API. */
+  voiceMonkeyTokenEnc: text('voice_monkey_token_enc'),
+  updatedAt: ts('updated_at')
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+});
+
+export const alexaOauthCodes = pgTable(
+  'alexa_oauth_codes',
+  {
+    ...base,
+    professionalId: uuid('professional_id')
+      .notNull()
+      .references(() => professionals.id, { onDelete: 'cascade' }),
+    codeHash: text('code_hash').notNull(),
+    redirectUri: text('redirect_uri').notNull(),
+    codeChallenge: text('code_challenge').notNull(),
+    codeChallengeMethod: text('code_challenge_method').$type<'S256' | 'plain'>().notNull(),
+    expiresAt: ts('expires_at').notNull(),
+  },
+  (t) => [uniqueIndex('alexa_oauth_codes_hash_uq').on(t.codeHash)],
+);
+
+export const alexaTokens = pgTable(
+  'alexa_tokens',
+  {
+    ...base,
+    professionalId: uuid('professional_id')
+      .notNull()
+      .references(() => professionals.id, { onDelete: 'cascade' }),
+    accessTokenHash: text('access_token_hash').notNull(),
+    accessExpiresAt: ts('access_expires_at').notNull(),
+    /** Refresh tokens do not expire (Alexa accepts that); deleting the row unlinks. */
+    refreshTokenHash: text('refresh_token_hash').notNull(),
+  },
+  (t) => [
+    uniqueIndex('alexa_tokens_access_uq').on(t.accessTokenHash),
+    uniqueIndex('alexa_tokens_refresh_uq').on(t.refreshTokenHash),
+    index('alexa_tokens_professional_idx').on(t.professionalId),
+  ],
+);

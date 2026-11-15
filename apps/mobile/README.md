@@ -51,44 +51,54 @@ como está, sem copiar o XML para dentro de código TypeScript.
 app/                      rotas (expo-router)
 src/theme/                tokens do app + useTheme + fontes
 src/components/           componentes base, um por arquivo (index.ts exporta todos)
-src/data/                 camada de dados: uma interface + mock por domínio; api.ts (stub); index.ts
+src/data/                 camada de dados: uma interface + mock por domínio; api.ts (API real); index.ts
 src/data/mock/            fixtures da demonstração (Marina, fisioterapia) e utilitários do mock
 src/features/<domínio>/   lógica de cada funcionalidade (auth, whatsapp, settings, account, agenda,
                           clients, waitlist, decisions, conversations, notifications, balcao)
 src/utils/agenda.ts       regras de agenda (B3, com testes)
 src/dev/                  flags e registro de simulações do menu de desenvolvimento
+src/lib/api/              cliente HTTP (Bearer, renovação de token), registro do push (push.ts)
+src/lib/realtime/         WebSocket /v1/realtime: reconexão, assinatura de eventos (useRealtime)
 assets/brand/             SVG da marca (cópias do kit)
 assets/images/            ícone, ícone adaptativo, splash, ícone de notificação (cópias/derivados do kit)
 scripts/rasterize-icons.cjs  gera os PNG que o Expo exige a partir dos SVG do kit
+scripts/roteiro-api.ts    roteiro da camada de dados contra a API real (ver "Fonte de dados")
 ```
 
 ### Mapa de rotas
 
-| Rota                       | Arquivo                           | Tela                         | Prompt | Dono  |
-| -------------------------- | --------------------------------- | ---------------------------- | ------ | ----- |
-| `/`                        | `app/(tabs)/index.tsx`            | Agenda do dia (aba)          | 03     | B3    |
-| `/decisoes`                | `app/(tabs)/decisoes.tsx`         | Decisões (aba, com contador) | 05     | C2    |
-| `/conversas`               | `app/(tabs)/conversas.tsx`        | Conversas (aba)              | 06     | C2    |
-| `/clientes`                | `app/(tabs)/clientes.tsx`         | Clientes (aba)               | 09     | B3    |
-| `/ajustes`                 | `app/(tabs)/ajustes.tsx`          | Ajustes (aba)                | 10     | B2    |
-| `/boas-vindas`             | `app/(auth)/boas-vindas.tsx`      | Boas-vindas                  | 01     | B2    |
-| `/login`                   | `app/(auth)/login.tsx`            | Entrar com celular           | 01     | B2    |
-| `/codigo`                  | `app/(auth)/codigo.tsx`           | Código de 6 dígitos          | 01     | B2    |
-| `/cadastro`                | `app/(onboarding)/cadastro.tsx`   | Cadastro rápido              | 01     | B2    |
-| `/whatsapp`                | `app/(onboarding)/whatsapp.tsx`   | Conectar o WhatsApp          | 02     | B2    |
-| `/agendamento/[id]`        | `app/agendamento/[id].tsx`        | Detalhe do agendamento       | 04     | B3    |
-| `/agendamento/novo`        | `app/agendamento/novo.tsx`        | Novo agendamento             | 04     | B3    |
-| `/conversa/[id]`           | `app/conversa/[id].tsx`           | Conversa                     | 06     | C2    |
-| `/cliente/[id]`            | `app/cliente/[id].tsx`            | Perfil do cliente            | 09     | B3    |
-| `/cliente/lista-de-espera` | `app/cliente/lista-de-espera.tsx` | Lista de espera              | 09     | B3    |
-| `/balcao`                  | `app/balcao/index.tsx`            | Modo Balcão (sempre escuro)  | 07     | C3    |
-| `/balcao/configurar`       | `app/balcao/configurar.tsx`       | Preparar o balcão            | 08     | D2    |
-| `/dev`                     | `app/dev/index.tsx`               | Menu de desenvolvimento      | —      | todos |
-| `/dev/vitrine`             | `app/dev/vitrine.tsx`             | Vitrine de componentes       | —      | todos |
+| Rota                       | Arquivo                                | Tela                                     | Prompt | Dono  |
+| -------------------------- | -------------------------------------- | ---------------------------------------- | ------ | ----- |
+| `/`                        | `app/(tabs)/index.tsx`                 | Agenda do dia (aba)                      | 03     | B3    |
+| `/decisoes`                | `app/(tabs)/decisoes.tsx`              | Decisões (aba, com contador)             | 05     | C2    |
+| `/conversas`               | `app/(tabs)/conversas.tsx`             | Conversas (aba)                          | 06     | C2    |
+| `/clientes`                | `app/(tabs)/clientes.tsx`              | Clientes (aba)                           | 09     | B3    |
+| `/ajustes`                 | `app/(tabs)/ajustes/index.tsx`         | Ajustes (aba)                            | 10     | B2    |
+| `/ajustes/negocio`         | `app/(tabs)/ajustes/negocio.tsx`       | Meu negócio (serviços, horários, folgas) | 10     | B2    |
+| `/ajustes/ia`              | `app/(tabs)/ajustes/ia.tsx`            | IA (tom, autonomia, pausa)               | 10     | B2    |
+| `/ajustes/voz`             | `app/(tabs)/ajustes/voz.tsx`           | Voz e Modo Balcão                        | 10     | B2    |
+| `/ajustes/whatsapp`        | `app/(tabs)/ajustes/whatsapp.tsx`      | WhatsApp conectado                       | 10     | B2    |
+| `/ajustes/conta`           | `app/(tabs)/ajustes/conta.tsx`         | Conta, privacidade, termos               | 10     | B2    |
+| `/ajustes/excluir-conta`   | `app/(tabs)/ajustes/excluir-conta.tsx` | Excluir conta (`DELETE /me`)             | 10     | B2    |
+| `/boas-vindas`             | `app/(auth)/boas-vindas.tsx`           | Boas-vindas                              | 01     | B2    |
+| `/login`                   | `app/(auth)/login.tsx`                 | Entrar com celular                       | 01     | B2    |
+| `/codigo`                  | `app/(auth)/codigo.tsx`                | Código de 6 dígitos                      | 01     | B2    |
+| `/cadastro`                | `app/(onboarding)/cadastro.tsx`        | Cadastro rápido                          | 01     | B2    |
+| `/whatsapp`                | `app/(onboarding)/whatsapp.tsx`        | Conectar o WhatsApp                      | 02     | B2    |
+| `/agendamento/[id]`        | `app/agendamento/[id].tsx`             | Detalhe do agendamento                   | 04     | B3    |
+| `/agendamento/novo`        | `app/agendamento/novo.tsx`             | Novo agendamento                         | 04     | B3    |
+| `/conversa/[id]`           | `app/conversa/[id].tsx`                | Conversa                                 | 06     | C2    |
+| `/cliente/[id]`            | `app/cliente/[id].tsx`                 | Perfil do cliente                        | 09     | B3    |
+| `/cliente/lista-de-espera` | `app/cliente/lista-de-espera.tsx`      | Lista de espera                          | 09     | B3    |
+| `/balcao`                  | `app/balcao/index.tsx`                 | Modo Balcão (sempre escuro)              | 07     | C3    |
+| `/balcao/configurar`       | `app/balcao/configurar.tsx`            | Preparar o balcão                        | 08     | D2    |
+| `/dev`                     | `app/dev/index.tsx`                    | Menu de desenvolvimento                  | —      | todos |
+| `/dev/vitrine`             | `app/dev/vitrine.tsx`                  | Vitrine de componentes                   | —      | todos |
 
 As rotas ainda não construídas mostram `PlaceholderScreen` com o título; quem constrói a tela
-substitui o arquivo inteiro. Os grupos `(auth)` e `(onboarding)` ainda não têm `_layout` (herdam a
-pilha raiz); B2 pode criar o seu. O redirecionamento de quem não está logado também é de B2.
+substitui o arquivo inteiro. Os grupos `(auth)`, `(onboarding)` e `(tabs)/ajustes` têm `_layout`
+próprio (pilhas). O redirecionamento por estado da sessão é `useAuthGuard` (`src/features/auth`),
+montado em `app/_layout.tsx`: sem sessão vai para `/boas-vindas`, conta nova para `/cadastro`.
 
 ### Componentes (`src/components/`)
 
@@ -101,7 +111,8 @@ atendimento, concluído; `pillForAppointment`), `Badge`, `TimeSlot` (ocupado, li
 recém-vagou pulsando, almoço hachurado, passado), `NowIndicator`, `SummaryStrip`, `BalcaoStatus`,
 `VoiceOrb` (parado, ouvindo, pensando, falando — Reanimated), `Banner` (info, success, warning,
 danger), `TextField`, `Chip`, `Checkbox`, `Switch`, `SegmentedControl`, `ProgressSteps`, `Avatar`,
-`ListItem`, `Header`, `EmptyState`, `ErrorState`, `LoadingState`, `Skeleton`, `BottomSheet`, `Toast`
+`ListItem`, `Header`, `DayStrip` (faixa de dias para escolher a data da agenda), `MessagePreview`
+("Mensagem que será enviada", com "Editar"), `EmptyState`, `ErrorState`, `LoadingState`, `Skeleton`, `BottomSheet`, `Toast`
 (`showToast()` + `ToastHost` no layout raiz), `Fab`, `Logo`, `PlaceholderScreen`.
 
 Componente novo: arquivo próprio em `src/components/`, exportado em `index.ts` e mostrado na vitrine.
@@ -116,7 +127,11 @@ escolhido por `EXPO_PUBLIC_DATA_SOURCE`:
   17:00 há 3 min, Diego 18:00; 8 atendimentos, 2 vagas, R$ 1.200; Beatriz pede encaixe às 16h;
   12 clientes; 8 conversas; decisões dos cinco tipos + histórico; lista de espera (3). Atraso falso
   de 300–600 ms (desligado no Jest). Código do login e da exclusão de conta: `123456`.
-- `api`: `src/data/api.ts` — stub; toda chamada rejeita com "não implementado" até o agente D1.
+- `api`: `src/data/api.ts` (`createApiData(client)`) — API real (seção abaixo).
+
+**Build de produção usa sempre a API:** `resolveDataSource` só aceita `mock` quando
+`DEV_TOOLS_ENABLED` (`__DEV__` ou `EXPO_PUBLIC_DEV_TOOLS=true`); num release sem essa variável,
+`EXPO_PUBLIC_DATA_SOURCE` é ignorada e a fonte é `api`.
 
 Para trocar: `apps/mobile/.env` com `EXPO_PUBLIC_DATA_SOURCE=api` e reinicie o Metro com
 `npx expo start --dev-client --clear` (variáveis `EXPO_PUBLIC_*` entram no bundle na hora do build).
@@ -133,6 +148,38 @@ Para trocar: `apps/mobile/.env` com `EXPO_PUBLIC_DATA_SOURCE=api` e reinicie o M
 | decisões        | `src/data/decisions.ts`     | `DecisionsData`                                           | C2   |
 | conversas       | `src/data/conversations.ts` | `ConversationsData`                                       | C2   |
 | voz             | `src/data/voice.ts`         | `VoiceData`                                               | C3   |
+| aparelhos       | `src/data/devices.ts`       | `DevicesData` (`POST /devices`, `DELETE /devices/:id`)    | D1   |
+
+### Camada de API (D1)
+
+- **Cliente HTTP** (`src/lib/api/client.ts`): `api.call(routes.x.y, { params, query, body })` — método,
+  caminho e schema de resposta vêm de `routes` (`packages/shared`); nada de URL escrita à mão. Base:
+  `EXPO_PUBLIC_API_URL` (sem `/v1`; emulador Android: `http://10.0.2.2:3333`). Toda resposta é
+  validada com o schema do contrato (falha = `DataError` `INVALID_RESPONSE`); erro da API vira
+  `DataError` com o `code` e a mensagem dela; sem rede = `NETWORK`; tempo limite de 30 s.
+- **Tokens:** lidos e gravados por `useSession.getState().tokens` / `setTokens` (expo-secure-store).
+  Um 401 dispara um único `POST /auth/refresh` compartilhado por todas as chamadas daquele momento,
+  que depois repetem uma vez. Refresh recusado = `useSession.clear()` e o guard leva a
+  `/boas-vindas`. Sem rede no refresh, a sessão fica.
+- **"Sair":** `data.auth.signOut()` remove o aparelho registrado (`DELETE /devices/:id`); a API não
+  tem rota de logout (JWT sem estado).
+- **Tempo real** (`src/lib/realtime`): `WS /v1/realtime?token=` aberto enquanto há sessão (só no modo
+  `api`), com reconexão (1 s, 2 s, 4 s… até 30 s), renovação do token no fechamento 4401 e
+  reconexão imediata ao voltar para o primeiro plano. Já alimenta: `whatsapp.status` →
+  `useWhatsAppStore`, `ai.status` → `useAiStore`, `decision.*` → `emitDecisionsChanged()` (aba,
+  contador e tela de Decisões). Em cada (re)conexão recarrega decisões e status do WhatsApp. Para uma
+  tela assinar: `useRealtime(['appointment.changed'], () => reload(true))`. Mantenha o
+  recarregamento por foco/polling como reserva (no mock nenhum evento chega).
+- **Push:** `usePushRegistration()` (`src/lib/api/push.ts`), montado em `app/_layout.tsx`: depois do
+  login, se a permissão de notificação **já** foi dada, pega o token Expo e faz `POST /devices`. Não
+  pede permissão. Sem `extra.eas.projectId` não registra nada (pendência em
+  `docs/pendencias/D1.md`).
+- **Roteiro contra a API local:** com a API e o seed rodando,
+  `EXPO_PUBLIC_API_URL=http://localhost:3333 npx tsx scripts/roteiro-api.ts` (login da Marina,
+  agenda, renovação de token, decisão com o evento pelo WebSocket, aparelho, e exclusão de uma conta
+  de teste nova criada pelo próprio roteiro).
+- **Testes:** `src/lib/api/client.test.ts` (servidor falso: renovação com chamadas simultâneas,
+  erros, schemas) e `src/lib/realtime/socket.test.ts` (socket falso: eventos, reconexão, 4401).
 
 Os tipos vêm de `@boramarca/shared` (nenhum tipo de entidade é redefinido no app). Erros chegam
 como `DataError` (`statusCode`, `code`, `message` em pt-BR). Para ver o estado de erro no mock:
@@ -143,8 +190,15 @@ menu de desenvolvimento → "Próxima chamada de dados falha".
 - Abrir: aba **Ajustes → Menu de desenvolvimento**, ou `boramarca://dev` / `boramarca://dev/vitrine`.
 - **Vitrine** (`app/dev/vitrine.tsx`): todos os componentes e estados, com chave Claro/Escuro, e uma
   composição da referência 04-agenda para comparação.
-- **Simulações** (`src/dev/simulations.ts`): "Simular decisão nova", "Simular queda do WhatsApp",
-  "Próximo pareamento falha", "Simular palavra de ativação", "Próxima chamada de dados falha".
+- **Simulações** (`src/dev/simulations.ts`): "Simular decisão nova" (C2: também mostra a
+  notificação com Sim e Não), "Decisão nova a cada 20 s (liga/desliga)" (C2), "Simular queda do
+  WhatsApp", "Próximo pareamento falha", "Próximo pareamento conecta" e "Próximo código de pareamento
+  expira" (B2, `src/features/whatsapp/simulations.ts`), "Simular palavra de ativação", "Próxima
+  chamada de dados falha". Só mudam os dados do mock.
+- **Painel do Balcão** (C3): três toques no logo da tela do Modo Balcão abrem o painel escondido
+  (`BalcaoDevPanel`, só com `DEV_TOOLS_ENABLED`) para disparar palavra de ativação, fala e silêncio.
+  Motores trocáveis com `setBalcaoEngines({...})` (`src/features/balcao/engines.ts`); estado em
+  `useBalcaoStore` (`active`, `snapshot`, `volume`; ex.: `useBalcaoStore((s) => s.active)`).
   Para estender: `registerSimulation({ id, label, description, run })` (mesmo `id` substitui o
   padrão) e, na tela que reage, `useEffect(() => onSimulation('wake-word', handler), [])`.
 - **Fora da produção:** `app/dev/_layout.tsx` redireciona para `/` e a entrada em Ajustes some
@@ -195,3 +249,67 @@ plugin). Builds no EAS (Linux) não têm esse limite.
 (rasterizados de `03-icones/android-monochrome.svg`) e `splash-icon.png` (símbolo
 `01-marca/svg/simbolo-cor.svg` sobre grafite). Para regenerar os PNG derivados:
 `node scripts/rasterize-icons.cjs`.
+
+## Modo Balcão nativo e roteiro de teste em aparelho (D2)
+
+**O que é nativo.** `src/features/balcao/native/` (importado por `app/_layout.tsx`) liga os motores
+reais com `setBalcaoEngines`: palavra de ativação Porcupine (`wakeWord.ts`), reconhecimento de fala
+pt-BR do sistema via `expo-speech-recognition` (`speechToText.ts`), fala `expo-speech` (já existia) e
+volume de mídia (Android). Sem `EXPO_PUBLIC_PICOVOICE_ACCESS_KEY` ou sem os arquivos de
+`assets/wakeword/` (gerados no console da Picovoice, ver `docs/pendencias/D2.md`), a palavra de
+ativação continua simulada e a tela mostra **Falar**. Se o Porcupine falhar ao iniciar, ele também
+cai para o botão.
+
+**Serviço em primeiro plano (só Android).** Módulo local `modules/balcao-service` (Kotlin) +
+config plugin `plugins/withBalcaoService.cjs` (serviço do tipo `microphone`, permissões
+`FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_MICROPHONE`, `RECORD_AUDIO`, `WAKE_LOCK`). Escolhido em vez
+de `react-native-background-actions` porque o Android 14+ exige o tipo declarado no `<service>` e
+passado em `startForeground`, e porque aqui o serviço também cuida da notificação com "Pausar", do
+wake lock, do som inaudível que mantém a caixa acordada e do aviso de troca de saída de áudio — tudo
+em ~200 linhas. O serviço segue a tela: abrir o Modo Balcão (ou "Ativar Modo Balcão" no assistente)
+o inicia com o app aberto, como o Android exige; sair do Modo Balcão ("Encerrar") o para e fala o
+resumo (`GET /voice/summary`). "Pausar" na notificação para o serviço e solta o microfone até o app
+voltar para a frente. `useBalcaoStore.active` acompanha o serviço. O Android não reinicia o serviço
+sozinho (proibido para `microphone` a partir do boot).
+
+**iOS.** Sem serviço: o Balcão funciona com o app aberto e a tela acesa. Textos de microfone e de
+reconhecimento de fala em pt-BR no `app.config.ts` (plugins `expo-audio` e
+`expo-speech-recognition`).
+
+**Outros plugins.** `plugins/withWindowsCmake.cjs` grava `sdk.dir` e `cmake.dir` (o CMake ≥ 4.1 mais
+novo em `<sdk>/cmake`) em `android/local.properties` a cada prebuild no Windows: o passo 3 de
+"Windows e o limite de 260 caracteres" agora é automático, mas **continua dependendo do CMake 4.1+
+instalado pelo SDK Manager** (sem ele o plugin avisa e o build falha como antes). `plugins/withWakeWord.cjs`
+copia os arquivos `.ppn`/`.pv` para o Android (`assets`) e o iOS (recursos do bundle).
+
+### Roteiro de teste manual — Android físico
+
+Pré-requisitos: dev build instalado (`assembleDebug`), `EXPO_PUBLIC_PICOVOICE_ACCESS_KEY` e arquivos
+da palavra (para testar a palavra real), caixa Bluetooth pareada, celular no carregador.
+
+1. **Assistente:** Ajustes → Voz e Balcão → Configurar o Balcão. Conceder microfone (o medidor mexe
+   ao falar em "Testar"), notificações, bateria ("Configurar" abre a lista do sistema; voltar e ver
+   "Ok"; conferir o passo a passo da marca do aparelho), "Testar som" sai na caixa, interruptor
+   "Manter caixa acordada". Continuar → dizer "Ei, Bora Marca" → "Reconheci sua voz" e a fala
+   "Tudo certo! Estou pronta para trabalhar." Dizer "bora marcar pra semana que vem?" não pode ativar.
+2. **Iniciar:** "Ativar Modo Balcão" → resumo do dia falado; notificação fixa "Bora Marca está
+   ouvindo" com "Pausar".
+3. **Tela bloqueada por 30 min:** simular/gerar uma decisão → o aviso toca, a pergunta é falada e
+   "sim" responde. Repetir "Ei, Bora Marca, quem é o próximo?".
+4. **Caixa:** desligar a caixa → aviso na tela e fala pelo celular; religar → volta a sair pela caixa.
+   Deixar 15 min em silêncio com "Manter caixa acordada" ligado → a caixa não desliga.
+5. **Pausar** na notificação → o serviço some; abrir o app → volta a ouvir.
+6. **Bateria em modo economia** e **reiniciar o celular:** o serviço não volta sozinho; abrir o app e
+   o Modo Balcão de novo.
+7. **Encerrar:** sair do Modo Balcão (segurar "Sair") → resumo de encerramento falado e a
+   notificação some.
+8. **App fechado:** deslizar o app para fora dos recentes, simular decisão pela API e tocar Sim na
+   notificação → respondida (tarefa do `expo-task-manager`).
+
+### Roteiro de teste manual — iPhone
+
+1. Assistente: microfone, reconhecimento de fala, notificações, testar som, teste final.
+2. Modo Balcão com o app aberto: a tela não apaga; "Ei, Bora Marca" (ou Falar) e uma decisão
+   respondida por voz.
+3. Bloquear a tela: o Balcão para de ouvir (esperado). A decisão chega por notificação com Sim/Não.
+4. Abrir o WhatsApp no pareamento (`LSApplicationQueriesSchemes`).

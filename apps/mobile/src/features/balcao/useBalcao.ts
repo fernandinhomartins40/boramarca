@@ -7,7 +7,9 @@ import { getBalcaoEngines } from './engines';
 import { initialSnapshot } from './machine';
 import { useBalcaoStore } from './store';
 
-// shortcut: polling until the app has the realtime channel (decision.created); swap for it then.
+import { realtime } from '@/lib/realtime';
+
+// Realtime `decision.created` triggers an immediate check; polling stays as the fallback (mock mode).
 const POLL_MS = 15_000;
 const VOLUME_MS = 30_000;
 
@@ -56,6 +58,7 @@ export function useBalcao(): BalcaoController {
     const volumeTimer = setInterval(checkVolume, VOLUME_MS);
     const offWake = onSimulation('wake-word', controller.wake);
     const offDecision = onSimulation('decision-new', () => void poll());
+    const offRealtime = realtime.subscribe(['decision.created'], () => void poll());
 
     return () => {
       alive = false;
@@ -63,6 +66,7 @@ export function useBalcao(): BalcaoController {
       clearInterval(volumeTimer);
       offWake();
       offDecision();
+      offRealtime();
       void controller.stop();
       useBalcaoStore.setState({ active: false, snapshot: initialSnapshot });
     };

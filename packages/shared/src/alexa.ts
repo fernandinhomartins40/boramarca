@@ -33,6 +33,20 @@ export const AlexaSettings = z.object({
 });
 export type AlexaSettings = z.infer<typeof AlexaSettings>;
 
+/**
+ * GET/PATCH /alexa/settings. Each professional uses their own Voice Monkey account: the token is
+ * write-only (stored encrypted by the API), so the response only says whether one is saved.
+ */
+export const AlexaSettingsResponse = AlexaSettings.extend({ voiceMonkeyTokenSet: z.boolean() });
+export type AlexaSettingsResponse = z.infer<typeof AlexaSettingsResponse>;
+export const AlexaSettingsPatch = z.object({
+  voiceMonkeyEnabled: z.boolean().optional(),
+  voiceMonkeyDevice: z.string().trim().min(1).max(100).nullable().optional(),
+  /** Voice Monkey v3 API token (voicemonkey.io > Dashboard > API). `null` removes it. */
+  voiceMonkeyToken: z.string().trim().min(8).max(500).nullable().optional(),
+});
+export type AlexaSettingsPatch = z.infer<typeof AlexaSettingsPatch>;
+
 /** Max time to answer Alexa (plan section 14). */
 export const ALEXA_RESPONSE_BUDGET_MS = 8000;
 

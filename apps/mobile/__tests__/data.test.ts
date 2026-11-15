@@ -18,11 +18,14 @@ describe('data source selection', () => {
     expect(resolveDataSource('anything')).toBe('mock');
   });
 
-  it('returns the mock layer for mock and the stub for api', async () => {
+  it('returns the mock layer for mock and the api layer for api', () => {
     expect(createData('mock')).toBe(mockData);
-    await expect(createData('api').agenda.getDay(today())).rejects.toThrow(
-      'api.agenda.getDay: não implementado',
-    );
+    expect(createData('api')).not.toBe(mockData);
+  });
+
+  it('release builds (no dev tools) always use the api', () => {
+    expect(resolveDataSource('mock', false)).toBe('api');
+    expect(resolveDataSource(undefined, false)).toBe('api');
   });
 });
 

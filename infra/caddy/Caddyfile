@@ -1,0 +1,20 @@
+# Caddy: automatic HTTPS (Let's Encrypt) for the site and the API. Domains come from the
+# environment (infra/.env.prod): SITE_DOMAIN, API_DOMAIN, ACME_EMAIL.
+{
+	email {$ACME_EMAIL}
+}
+
+{$SITE_DOMAIN} {
+	encode zstd gzip
+	reverse_proxy web:3000
+}
+
+www.{$SITE_DOMAIN} {
+	redir https://{$SITE_DOMAIN}{uri} permanent
+}
+
+{$API_DOMAIN} {
+	encode zstd gzip
+	# The API sees the client IP in X-Forwarded-For (TRUST_PROXY=true): per-IP limits work.
+	reverse_proxy api:3333
+}

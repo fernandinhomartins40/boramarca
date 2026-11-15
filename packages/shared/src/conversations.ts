@@ -57,6 +57,10 @@ export type ConversationListQuery = z.infer<typeof ConversationListQuery>;
 export const ConversationListResponse = paginated(ConversationView);
 export type ConversationListResponse = z.infer<typeof ConversationListResponse>;
 
+// ---- GET /conversations/:id (one conversation, e.g. the chat header; does not mark it as read)
+export const ConversationGetResponse = ConversationView;
+export type ConversationGetResponse = z.infer<typeof ConversationGetResponse>;
+
 // ---- GET /conversations/:id/messages (newest first; marks the conversation as read)
 export const MessageListQuery = z.object({
   cursor: z.string().optional(),

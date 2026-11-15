@@ -42,6 +42,7 @@ export async function salonReports(
       recoveredFitInsCount: 0,
       recoveredValueCents: 0,
       noShowRate: 0,
+      appointmentsDoneCount: 0,
       occupancyByProfessional: [],
       heatmap: [],
     };
@@ -128,6 +129,7 @@ export async function salonReports(
     recoveredFitInsCount: recoveredCount,
     recoveredValueCents: recoveredValue,
     noShowRate: rate(noShow, done + noShow),
+    appointmentsDoneCount: done,
     occupancyByProfessional: team.map((t) => ({
       professionalId: t.id,
       name: t.name,

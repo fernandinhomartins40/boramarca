@@ -9,7 +9,15 @@ import {
   MessagePreviewRequest,
   MessagePreviewResponse,
 } from './ai';
-import { AlexaSkillRequest, AlexaSkillResponse } from './alexa';
+import {
+  AlexaOAuthAuthorizeQuery,
+  AlexaOAuthTokenRequest,
+  AlexaOAuthTokenResponse,
+  AlexaSettingsPatch,
+  AlexaSettingsResponse,
+  AlexaSkillRequest,
+  AlexaSkillResponse,
+} from './alexa';
 import {
   AgendaQuery,
   AgendaResponse,
@@ -45,6 +53,7 @@ import {
   ClientUpdate,
 } from './clients';
 import {
+  ConversationGetResponse,
   ConversationListQuery,
   ConversationListResponse,
   HandoffBody,
@@ -413,6 +422,13 @@ export const routes = {
       query: ConversationListQuery,
       response: ConversationListResponse,
     }),
+    get: r({
+      method: 'GET',
+      path: '/conversations/:id',
+      auth: 'jwt',
+      params: IdParams,
+      response: ConversationGetResponse,
+    }),
     messages: r({
       method: 'GET',
       path: '/conversations/:id/messages',
@@ -573,6 +589,24 @@ export const routes = {
       response: SalonClientsResponse,
     }),
     plan: r({ method: 'GET', path: '/salon/plan', auth: 'owner', response: SalonPlanResponse }),
+    /** Owner answers a pending Decision of any professional of the salon (panel side list). */
+    answerDecision: r({
+      method: 'POST',
+      path: '/salon/decisions/:id/answer',
+      auth: 'owner',
+      params: IdParams,
+      body: DecisionAnswerBody,
+      response: DecisionAnswerResponse,
+    }),
+    /** Owner moves an appointment of any professional of the salon (panel drag to reschedule). */
+    rescheduleAppointment: r({
+      method: 'POST',
+      path: '/salon/appointments/:id/reschedule',
+      auth: 'owner',
+      params: IdParams,
+      body: AppointmentReschedule,
+      response: AppointmentActionResponse,
+    }),
     kitLead: r({
       method: 'POST',
       path: '/kit-leads',
@@ -588,6 +622,35 @@ export const routes = {
       auth: 'public',
       body: AlexaSkillRequest,
       response: AlexaSkillResponse,
+    }),
+    /** Account linking: shows the phone + code login page, then redirects to Amazon with `code`. */
+    oauthAuthorize: r({
+      method: 'GET',
+      path: '/alexa/oauth/authorize',
+      auth: 'public',
+      query: AlexaOAuthAuthorizeQuery,
+      response: OkResponse,
+    }),
+    oauthToken: r({
+      method: 'POST',
+      path: '/alexa/oauth/token',
+      auth: 'public',
+      body: AlexaOAuthTokenRequest,
+      response: AlexaOAuthTokenResponse,
+    }),
+    /** Per-professional Voice Monkey announcement settings (token is write-only). */
+    settings: r({
+      method: 'GET',
+      path: '/alexa/settings',
+      auth: 'jwt',
+      response: AlexaSettingsResponse,
+    }),
+    updateSettings: r({
+      method: 'PATCH',
+      path: '/alexa/settings',
+      auth: 'jwt',
+      body: AlexaSettingsPatch,
+      response: AlexaSettingsResponse,
     }),
   },
 } as const;

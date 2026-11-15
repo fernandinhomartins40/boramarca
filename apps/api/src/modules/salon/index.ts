@@ -166,6 +166,8 @@ const salon: FastifyPluginAsync = async (app) => {
         ),
       );
     }
+    if (req.query.onWaitlist !== undefined)
+      filters.push(req.query.onWaitlist ? sql`${onWaitlist}` : sql`not ${onWaitlist}`);
     if (inactiveDays)
       filters.push(sql`${lastVisitAt} < now() - make_interval(days => ${inactiveDays})`);
     const csv = format === 'csv';
@@ -229,6 +231,51 @@ const salon: FastifyPluginAsync = async (app) => {
         .send(`\uFEFF${[header.join(','), ...lines].join('\r\n')}\r\n`) as never;
     }
     return { items, nextCursor: rows.length > limit ? String(offset + limit) : null };
+  });
+
+  /** Professional id of a row of `table` in the owner's salon; 404 otherwise (isolation). */
+  async function ownerOf(
+    table: typeof aiDecisions | typeof appointments,
+    id: string,
+    salonId: string,
+  ): Promise<string> {
+    const [row] = await db
+      .select({ pid: table.professionalId })
+      .from(table)
+      .innerJoin(professionals, eq(professionals.id, table.professionalId))
+      .where(and(eq(table.id, id), eq(professionals.salonId, salonId)));
+    if (!row) throw notFound(table === aiDecisions ? 'Decisão' : 'Agendamento');
+    return row.pid;
+  }
+
+  // Same service as POST /decisions/:id/answer, on behalf of the professional; audited as the owner.
+  route(app, s.answerDecision, async (req) => {
+    const pid = await ownerOf(aiDecisions, req.params.id, req.scope.salonId);
+    const r = await app.messaging.decisions.answer(pid, req.params.id, req.body);
+    await audit(db, pid, 'professional', 'salon.decision_answered_by_owner', {
+      decisionId: req.params.id,
+      ownerId: req.scope.professionalId,
+    });
+    return r;
+  });
+
+  // Drag to reschedule in the panel: the agenda motor checks the slot of that professional.
+  route(app, s.rescheduleAppointment, async (req) => {
+    const pid = await ownerOf(appointments, req.params.id, req.scope.salonId);
+    const { notifyClient, messageText } = req.body;
+    const r = await app.agenda.reschedule(
+      { professionalId: pid, actor: 'professional' },
+      req.params.id,
+      {
+        ...req.body,
+        notice: { notifyClient, messageText },
+      },
+    );
+    await audit(db, pid, 'professional', 'salon.appointment_rescheduled_by_owner', {
+      appointmentId: req.params.id,
+      ownerId: req.scope.professionalId,
+    });
+    return r;
   });
 
   route(app, s.plan, async (req) => {

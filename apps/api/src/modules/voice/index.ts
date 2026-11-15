@@ -1,16 +1,10 @@
-import { and, asc, eq, gt } from 'drizzle-orm';
 import type { FastifyPluginAsync } from 'fastify';
-import {
-  firstName,
-  interpretVoiceCommand,
-  spokenTimeOf,
-  type VoiceDaySummary,
-} from '@boramarca/ia';
+import { firstName, spokenTimeOf } from '@boramarca/ia';
 import { routes } from '@boramarca/shared';
-import { clients, conversations, services } from '../../db/schema';
 import { loadPro } from '../../lib/core';
 import { route } from '../../lib/route';
 import { addDays, todayIn } from '../../lib/time';
+import { createVoice } from './service';
 
 const joinNames = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 const reais = (cents: number) =>
@@ -21,59 +15,9 @@ const voice: FastifyPluginAsync = async (app) => {
   const v = routes.voice;
   const db = app.db;
 
-  /** Today's agenda already summarized: first names only, no phones. */
-  async function daySummary(pid: string): Promise<VoiceDaySummary> {
-    const pro = await loadPro(db, pid);
-    const tz = pro.salon.timezone;
-    const date = todayIn(tz, app.now());
-    const [day, [shortest], unread] = await Promise.all([
-      app.agenda.getDay(pid, date),
-      db
-        .select({ d: services.durationMin })
-        .from(services)
-        .where(and(eq(services.professionalId, pid), eq(services.active, true)))
-        .orderBy(asc(services.durationMin))
-        .limit(1),
-      db
-        .select({ name: clients.name, count: conversations.unreadCount })
-        .from(conversations)
-        .innerJoin(clients, eq(clients.id, conversations.clientId))
-        .where(and(eq(conversations.professionalId, pid), gt(conversations.unreadCount, 0))),
-    ]);
-    const free = await app.agenda.findFreeSlots(pid, date, shortest?.d ?? 30);
-    return {
-      now: app.now().toISOString(),
-      timezone: tz,
-      appointments: day.appointments.map((a) => ({
-        startsAt: a.startsAt,
-        clientFirstName: firstName(a.clientName),
-        serviceNames: a.services.map((s) => s.name),
-        status: a.status,
-      })),
-      freeSlots: free.map((s) => s.startsAt),
-      unreadMessages: unread.map((u) => ({ clientFirstName: firstName(u.name), count: u.count })),
-    };
-  }
+  const voiceSvc = createVoice(app);
 
-  route(app, v.command, async (req) => {
-    const pid = req.scope.professionalId;
-    if (req.body.decisionId) {
-      const r = await app.messaging.decisions.answer(pid, req.body.decisionId, {
-        text: req.body.text,
-        via: 'voice',
-      });
-      return {
-        intent: 'answer_decision' as const,
-        speech: r.spokenConfirmation,
-        decisionId: r.decision.id,
-      };
-    }
-    const day = await daySummary(pid);
-    const a = await interpretVoiceCommand(req.body.text, day, {
-      llm: app.messaging.core.llm ?? undefined,
-    });
-    return { intent: a.intent, speech: a.speech, decisionId: null };
-  });
+  route(app, v.command, async (req) => voiceSvc.command(req.scope.professionalId, req.body));
 
   route(app, v.summary, async (req) => {
     const pid = req.scope.professionalId;

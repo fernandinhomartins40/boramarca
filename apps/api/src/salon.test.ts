@@ -130,3 +130,21 @@ async function clientOfMarina() {
   const list = (await get('/v1/clients?search=Helena')).json();
   return list.items[0].id as string;
 }
+
+// Last in this file (it replaces the demo salon): the seed works on weekends too, so reviewers
+// and store screenshots find a full day whatever the weekday (`pnpm db:seed` on that day).
+it('db:seed gives Marina hours, appointments and a pending decision on Saturday and Sunday', async () => {
+  for (const day of ['2030-03-09', '2030-03-10']) {
+    expect([6, 0]).toContain(weekdayOf(day));
+    const s = await seedDemo(app.db, zonedToUtc(day, '11:30', TZ));
+    const [marina] = await app.db
+      .select()
+      .from(professionals)
+      .where(eq(professionals.phone, DEMO_PHONES.marina));
+    const agenda = await app.agenda.getDay(marina!.id, s.today);
+    expect(s.today).toBe(day);
+    expect(agenda.workingHours).not.toBeNull();
+    expect(agenda.appointments.length).toBeGreaterThan(5);
+    expect(await app.messaging.decisions.list(marina!.id, 'pending', 5)).toHaveLength(1);
+  }
+}, 600_000);

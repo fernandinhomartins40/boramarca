@@ -22,6 +22,10 @@ const vars = (c: ColorScheme, indent: string) =>
     .map(([k, v]) => `${indent}--bm-${kebab(k)}: ${v};`)
     .join('\n');
 
+/** Tailwind 4's default --container-* names. */
+const CONTAINERS = '3xs 2xs xs sm md lg xl 2xl 3xl 4xl 5xl 6xl 7xl'.split(' ');
+const sizeKeys = Object.keys(spacing).filter((k) => CONTAINERS.includes(k));
+
 export function renderThemeCss(): string {
   const tokenNames = Object.keys(colors.light);
   return `/* GERADO por scripts/gen-theme.ts a partir de @boramarca/shared/theme. Não edite à mão. */
@@ -49,6 +53,13 @@ ${Object.entries(spacing)
   .map(([k, v]) => `  --spacing-${k}: ${v}px;`)
   .join('\n')}
   --container-bora: ${web.container};
+  /* max-w-*, w-* and min-w-* read --spacing-* before --container-*, so the names both share
+     (sm, md…) would size to the spacing token. Their own namespaces win: back to the containers. */
+${sizeKeys
+  .flatMap((k) =>
+    ['max-width', 'width', 'min-width'].map((ns) => `  --${ns}-${k}: var(--container-${k});`),
+  )
+  .join('\n')}
 }
 
 /* Semantic tokens switch with the color scheme. */

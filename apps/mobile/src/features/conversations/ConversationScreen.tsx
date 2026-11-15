@@ -28,24 +28,27 @@ import {
 import { data } from '@/data';
 import { clock } from '@/features/agenda/format';
 import { useLoad } from '@/features/agenda/useLoad';
+import { useRealtime } from '@/lib/realtime';
 import { useTheme } from '@/theme';
 import { nextLabel } from './format';
 import { useDictation } from './useDictation';
 
 async function loadConversation(id: string) {
-  // shortcut: the API has no GET /conversations/:id, so the header comes from the list (limit 200);
-  // ask D1 for a single-conversation route if accounts get more conversations than that.
-  const [list, messages] = await Promise.all([
-    data.conversations.list({ limit: 200 }),
+  const [conversation, messages] = await Promise.all([
+    data.conversations.get(id),
     data.conversations.messages(id),
   ]);
-  return { conversation: list.items.find((c) => c.id === id) ?? null, messages: messages.items };
+  return { conversation, messages: messages.items };
 }
 
 /** Conversa (prompt 06, reference 07 right). */
 export function ConversationScreen({ id }: { id: string }) {
   const t = useTheme();
   const load = useLoad(() => loadConversation(id), [id]);
+  useRealtime(['message.created', 'conversation.updated'], (e) => {
+    const cid = e.type === 'message.created' ? e.data.conversationId : e.data.conversation.id;
+    if (cid === id) void load.reload(true);
+  });
   const [conversation, setConversation] = useState<ConversationView | null>(null);
   const [sent, setSent] = useState<Message[]>([]);
   const [text, setText] = useState('');

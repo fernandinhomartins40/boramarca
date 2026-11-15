@@ -6,8 +6,11 @@ import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { ToastHost } from '@/components/Toast';
 import { useAuthGuard, useSession } from '@/features/auth';
+import '@/features/balcao/native'; // native voice + Android microphone service (D2)
 import { useDecisionNotifications } from '@/features/notifications';
 import { GlobalBanners } from '@/features/settings';
+import { usePushRegistration } from '@/lib/api/push';
+import { useRealtimeConnection } from '@/lib/realtime';
 import { useTheme } from '@/theme';
 import { interFonts } from '@/theme/fonts';
 
@@ -22,6 +25,9 @@ export default function RootLayout() {
   const ready = (loaded || !!error) && hydrated;
   useAuthGuard();
   useDecisionNotifications();
+  // api mode only (D1): WebSocket while signed in, push token after login
+  useRealtimeConnection();
+  usePushRegistration();
 
   useEffect(() => {
     if (ready) SplashScreen.hideAsync().catch(() => undefined);

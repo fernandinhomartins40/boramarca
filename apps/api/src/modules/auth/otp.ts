@@ -14,7 +14,8 @@ export interface OtpSender {
 /** Development sender: writes the code to the log (never the phone). */
 export const logOtpSender = (log: { info: (o: object, m: string) => void }): OtpSender => ({
   async send(_phone, code, purpose) {
-    log.info({ purpose, code }, 'OTP de desenvolvimento (use este código ou 123456)');
+    // Dev only (production never uses this sender). In the message: the logger censors `code` keys.
+    log.info({ purpose }, `OTP de desenvolvimento: ${code} (ou 123456)`);
   },
 });
 
@@ -33,6 +34,10 @@ export const DEV_OTP = '123456';
 const hash = (secret: string, phone: string, purpose: OtpPurpose, code: string) =>
   createHmac('sha256', secret).update(`${purpose}:${phone}:${code}`).digest('hex');
 
+/** The store review account (plan section 9): fixed phone + code, on only when both are set. */
+export const isReviewPhone = (config: Config, phone: string) =>
+  Boolean(config.REVIEW_PHONE && config.REVIEW_OTP && phone === config.REVIEW_PHONE);
+
 /** Creates (or replaces) the code for phone+purpose and sends it. */
 export async function requestOtp(
   db: Db,
@@ -41,6 +46,13 @@ export async function requestOtp(
   phone: string,
   purpose: OtpPurpose,
 ) {
+  // The reviewer types REVIEW_OTP: nothing to send (and no SMS provider needed for the review).
+  if (isReviewPhone(config, phone))
+    return {
+      ok: true as const,
+      expiresInSeconds: OTP_TTL_SECONDS,
+      retryAfterSeconds: OTP_RESEND_SECONDS,
+    };
   const [prev] = await db
     .select({ sentAt: otpCodes.createdAt })
     .from(otpCodes)
@@ -89,13 +101,7 @@ export async function consumeOtp(
   purpose: OtpPurpose,
 ): Promise<void> {
   if (config.NODE_ENV !== 'production' && code === DEV_OTP) return;
-  if (
-    config.REVIEW_PHONE &&
-    config.REVIEW_OTP &&
-    phone === config.REVIEW_PHONE &&
-    code === config.REVIEW_OTP
-  )
-    return;
+  if (isReviewPhone(config, phone) && code === config.REVIEW_OTP) return;
 
   const where = and(eq(otpCodes.phone, phone), eq(otpCodes.purpose, purpose));
   const [row] = await db.select().from(otpCodes).where(where);

@@ -13,9 +13,11 @@ import {
   serializerCompiler,
   validatorCompiler,
 } from 'fastify-type-provider-zod';
+import type { RequestVerifier } from '@boramarca/alexa';
 import { API_PREFIX } from '@boramarca/shared';
 import type { Config } from './config';
 import { AppError, registerErrorHandler } from './lib/errors';
+import { loggerOptions } from './lib/logger';
 import auth from './plugins/auth';
 import type { OtpSender } from './modules/auth/otp';
 import infra from './plugins/infra';
@@ -27,13 +29,27 @@ const here = dirname(fileURLToPath(import.meta.url));
 export interface AppOverrides extends MessagingOverrides {
   otpSender?: OtpSender;
   now?: () => Date;
+  /** Alexa request verifier (tests: own CA and clock). Default: Amazon's real checks. */
+  alexaVerifier?: RequestVerifier;
+  /** HTTP used by the Voice Monkey client (tests: simulated). */
+  voiceMonkeyFetch?: typeof fetch;
+  /** Skill budget for the API calls (default 6 s; tests on a loaded machine use more). */
+  alexaTimeoutMs?: number;
+}
+
+declare module 'fastify' {
+  interface FastifyInstance {
+    alexaOverrides: Pick<AppOverrides, 'alexaVerifier' | 'voiceMonkeyFetch' | 'alexaTimeoutMs'>;
+  }
 }
 
 /** `overrides` lets tests swap the OTP sender, WhatsApp gateway, LLM, push and clock. */
 export async function buildApp(config: Config, overrides: AppOverrides = {}) {
   const app = Fastify({
-    logger: config.LOG_LEVEL === 'silent' ? false : { level: config.LOG_LEVEL },
+    logger: config.LOG_LEVEL === 'silent' ? false : loggerOptions(config.LOG_LEVEL),
     trustProxy: config.TRUST_PROXY,
+    // Autoload imports every module (ASK SDK included): 10 s default is short on a busy host.
+    pluginTimeout: 120_000,
   });
 
   // Zod schemas from @boramarca/shared validate input, serialize output and feed OpenAPI.
@@ -61,6 +77,11 @@ export async function buildApp(config: Config, overrides: AppOverrides = {}) {
       }),
   });
   await app.register(messaging, { overrides });
+  app.decorate('alexaOverrides', {
+    alexaVerifier: overrides.alexaVerifier,
+    voiceMonkeyFetch: overrides.voiceMonkeyFetch,
+    alexaTimeoutMs: overrides.alexaTimeoutMs,
+  });
   await app.register(websocket);
   await app.register(swagger, {
     openapi: {

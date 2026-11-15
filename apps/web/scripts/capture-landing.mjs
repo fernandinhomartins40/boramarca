@@ -1,11 +1,14 @@
 /* global document, window, getComputedStyle -- used inside page.evaluate (runs in the browser) */
 // Landing screenshots at the plan's four widths + horizontal-scroll and image-ratio checks.
-// Usage: next start on :3000, then `node scripts/capture-landing.mjs [baseUrl]`.
+// Usage: next start on :3000, then `node scripts/capture-landing.mjs [baseUrl] [outDir]`.
 import { chromium } from '@playwright/test';
-import { fileURLToPath } from 'node:url';
+import { resolve } from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const base = process.argv[2] ?? 'http://localhost:3000';
-const out = new URL('../docs/capturas-c5/', import.meta.url);
+const out = process.argv[3]
+  ? pathToFileURL(resolve(process.argv[3]) + '/')
+  : new URL('../docs/capturas-c5/', import.meta.url);
 // Uses the installed Chrome (no browser download needed).
 const browser = await chromium.launch({ channel: 'chrome' });
 let failed = false;

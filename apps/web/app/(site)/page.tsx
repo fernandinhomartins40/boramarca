@@ -207,7 +207,7 @@ export default function HomePage() {
         <div className="grid gap-xl border-b border-border pb-xxxl lg:grid-cols-2 lg:items-center">
           <div>
             <h2 className="text-title text-text md:text-display">Da conversa ao atendimento.</h2>
-            <p className="mt-md max-w-[28rem] text-body text-text">
+            <p className="mt-md max-w-md text-body text-text">
               Seu cliente pergunta pelo WhatsApp. A IA consulta os serviços e horários disponíveis e
               conduz o agendamento.
             </p>
@@ -273,7 +273,7 @@ export default function HomePage() {
                 height={c.h}
                 alt={c.alt}
                 sizes="(min-width: 768px) 30vw, 90vw"
-                className="mx-auto h-auto w-full max-w-[20rem] object-contain"
+                className="mx-auto h-auto w-full max-w-xs object-contain"
               />
               <h3 className="mt-lg text-heading text-text">{c.title}</h3>
               <p className="mt-sm text-body-small text-text-muted">{c.text}</p>
@@ -291,7 +291,7 @@ export default function HomePage() {
               <br />
               <span className="text-brand-lima lg:whitespace-nowrap">Responda por voz.</span>
             </h2>
-            <p className="mt-lg max-w-[28rem] text-body">
+            <p className="mt-lg max-w-md text-body">
               No Modo Balcão, o celular anuncia os pedidos. Você responde falando ou toca em Sim ou
               Não.
             </p>
@@ -301,7 +301,7 @@ export default function HomePage() {
               </span>
               O celular escuta. A caixa reproduz a voz.
             </p>
-            <p className="mt-lg max-w-[28rem] text-caption">
+            <p className="mt-lg max-w-md text-caption">
               No Android, o celular escuta mesmo com a tela bloqueada. No iPhone, o Modo Balcão
               funciona com o app aberto e a tela acesa.
             </p>
@@ -337,7 +337,7 @@ export default function HomePage() {
             height={1024}
             alt="Pergunta ao profissional: Beatriz pode vir às 16h? Com botões Sim e Não"
             sizes="(min-width: 1024px) 28vw, 90vw"
-            className="mx-auto h-auto w-full max-w-[24rem] object-contain"
+            className="mx-auto h-auto w-full max-w-sm object-contain"
           />
           <ul
             aria-label="Exemplo de permissões da IA"

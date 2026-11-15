@@ -1,0 +1,2 @@
+# The root .gitignore hides every .env.*; the production template is meant to be committed.
+!.env.prod.example

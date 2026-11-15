@@ -24,3 +24,11 @@ it('exposes every semantic token as a Tailwind color', () => {
   ])
     expect(css).toContain(`--color-${t}: var(--bm-${t});`);
 });
+
+it('keeps max-w-sm/md/xl on the container sizes, not on the spacing tokens', () => {
+  const css = renderThemeCss();
+  for (const k of ['sm', 'md', 'xl']) {
+    expect(css).toContain(`--spacing-${k}:`);
+    expect(css).toContain(`--max-width-${k}: var(--container-${k});`);
+  }
+});

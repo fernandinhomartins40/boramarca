@@ -1,0 +1,18 @@
+# Build context = repo root. Keep it small and free of secrets.
+**/node_modules
+**/.next
+**/dist
+**/coverage
+**/.env
+**/.env.*
+!**/.env.example
+.git
+.github
+.claude
+docs
+Bora-Marca-Kit
+Bora-Marca-pacote-completo
+# The lockfile lists the mobile app: keep only its package.json.
+apps/mobile/*
+!apps/mobile/package.json
+infra

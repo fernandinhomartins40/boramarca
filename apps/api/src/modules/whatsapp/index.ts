@@ -69,7 +69,12 @@ const whatsapp: FastifyPluginAsync = async (app) => {
       .values({ professionalId: pid, instanceName, phone: req.body.phone ?? null })
       .onConflictDoUpdate({
         target: whatsappSessions.professionalId,
-        set: { updatedAt: new Date(), ...(req.body.phone && { phone: req.body.phone }) },
+        // instanceName too: the review account must stay on the simulated WhatsApp.
+        set: {
+          instanceName,
+          updatedAt: new Date(),
+          ...(req.body.phone && { phone: req.body.phone }),
+        },
       })
       .returning();
     const secret = config.WHATSAPP_WEBHOOK_SECRET;

@@ -42,6 +42,23 @@
   --spacing-xxl: 32px;
   --spacing-xxxl: 48px;
   --container-bora: 76rem;
+  /* max-w-*, w-* and min-w-* read --spacing-* before --container-*, so the names both share
+     (sm, md…) would size to the spacing token. Their own namespaces win: back to the containers. */
+  --max-width-xs: var(--container-xs);
+  --width-xs: var(--container-xs);
+  --min-width-xs: var(--container-xs);
+  --max-width-sm: var(--container-sm);
+  --width-sm: var(--container-sm);
+  --min-width-sm: var(--container-sm);
+  --max-width-md: var(--container-md);
+  --width-md: var(--container-md);
+  --min-width-md: var(--container-md);
+  --max-width-lg: var(--container-lg);
+  --width-lg: var(--container-lg);
+  --min-width-lg: var(--container-lg);
+  --max-width-xl: var(--container-xl);
+  --width-xl: var(--container-xl);
+  --min-width-xl: var(--container-xl);
 }
 
 /* Semantic tokens switch with the color scheme. */

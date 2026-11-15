@@ -38,6 +38,7 @@ import {
 } from '@/components';
 import { data } from '@/data';
 import { useBalcaoStore } from '@/features/balcao/store';
+import { useRealtime } from '@/lib/realtime';
 import { handleDecisionAction } from '@/features/decisions';
 import { useTheme } from '@/theme';
 import {
@@ -85,6 +86,7 @@ export function AgendaScreen() {
     [reloadDay, reloadDecisions],
   );
   useRefreshOnFocus(refresh);
+  useRealtime(['appointment.changed', 'decision.created', 'decision.resolved'], () => void refresh());
   useEffect(() => {
     const timer = setInterval(() => void refresh(), AGENDA_REFRESH_MS);
     return () => clearInterval(timer);

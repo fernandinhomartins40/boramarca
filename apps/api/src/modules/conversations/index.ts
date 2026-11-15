@@ -5,9 +5,15 @@ import { clients, conversations, messages } from '../../db/schema';
 import { audit } from '../../lib/audit';
 import { AppError, notFound } from '../../lib/errors';
 import { route } from '../../lib/route';
-import { conversationColumns, messageWire, publishConversation, toConversationView } from './views';
+import {
+  conversationColumns,
+  conversationViews,
+  messageWire,
+  publishConversation,
+  toConversationView,
+} from './views';
 
-/** GET /conversations, GET/POST /conversations/:id/messages, POST /conversations/:id/handoff. */
+/** GET /conversations, GET /conversations/:id, GET/POST /conversations/:id/messages, POST /conversations/:id/handoff. */
 const conversationsModule: FastifyPluginAsync = async (app) => {
   const c = routes.conversations;
   const db = app.db;
@@ -50,6 +56,13 @@ const conversationsModule: FastifyPluginAsync = async (app) => {
       items: rows.slice(0, limit).map(toConversationView),
       nextCursor: rows.length > limit ? String(offset + limit) : null,
     };
+  });
+
+  route(app, c.get, async (req) => {
+    const pid = req.scope.professionalId;
+    const [v] = await conversationViews(db, pid, [req.params.id]);
+    if (!v) throw notFound('Conversa');
+    return v;
   });
 
   route(app, c.messages, async (req) => {

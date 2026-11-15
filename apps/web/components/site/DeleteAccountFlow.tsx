@@ -18,15 +18,37 @@ type Step = 'phone' | 'loginCode' | 'confirm' | 'deleteCode' | 'team' | 'done';
 const msg = (err: unknown) =>
   err instanceof Error ? err.message : 'Algo deu errado. Tente de novo em instantes.';
 
+const ACCOUNT_NOT_FOUND = 'ACCOUNT_NOT_FOUND';
+export const NO_ACCOUNT = 'Não existe conta com este número.';
+
+/** Every code of this page is a `delete_account` one, so checking a number never signs it up. */
+export const requestDeleteCode = (phone: string, fetchImpl?: typeof fetch) =>
+  callApi(routes.auth.otpRequest, { body: { phone, purpose: 'delete_account' } }, fetchImpl);
+
+/** Spends the first code to enter the account; 404 ACCOUNT_NOT_FOUND when the number has none. */
+export async function signInToDelete(
+  phone: string,
+  code: string,
+  fetchImpl?: typeof fetch,
+): Promise<string> {
+  try {
+    return (await callApi(routes.auth.otpVerify, { body: { phone, code } }, fetchImpl)).accessToken;
+  } catch (err) {
+    if (err instanceof ApiCallError && err.code === ACCOUNT_NOT_FOUND)
+      throw new ApiCallError(err.status, err.code, NO_ACCOUNT);
+    throw err;
+  }
+}
+
 /**
  * /excluir-conta, without the app: `DELETE /me` needs a session, so the person first proves the
- * number is theirs with a login code, then confirms with a fresh `delete_account` code.
+ * number is theirs with a `delete_account` code (spent on entering the account), then confirms
+ * with a fresh one.
  */
 export function DeleteAccountFlow() {
   const [step, setStep] = useState<Step>('phone');
   const [phone, setPhone] = useState('');
   const [token, setToken] = useState('');
-  const [isNewUser, setIsNewUser] = useState(false);
   const [deleteCode, setDeleteCode] = useState('');
   const [team, setTeam] = useState<TeamMember[]>([]);
   const [error, setError] = useState('');
@@ -48,26 +70,26 @@ export function DeleteAccountFlow() {
     }
   };
 
-  const requestCode = (purpose: 'login' | 'delete_account') =>
-    callApi(routes.auth.otpRequest, { body: { phone, purpose } });
-
   const onPhone = run(async () => {
     if (!PhoneE164.safeParse(phone).success)
       throw new Error('Informe o celular com DDD, por exemplo (11) 98765-4321.');
-    await requestCode('login');
+    await requestDeleteCode(phone);
     setStep('loginCode');
   });
 
   const onLoginCode = (code: string) =>
     run(async () => {
-      const res = await callApi(routes.auth.otpVerify, { body: { phone, code } });
-      setToken(res.accessToken);
-      setIsNewUser(res.isNewUser);
+      try {
+        setToken(await signInToDelete(phone, code));
+      } catch (err) {
+        if (err instanceof ApiCallError && err.code === ACCOUNT_NOT_FOUND) setStep('phone');
+        throw err;
+      }
       setStep('confirm');
     });
 
   const onConfirm = run(async () => {
-    await requestCode('delete_account');
+    await requestDeleteCode(phone);
     setStep('deleteCode');
   });
 
@@ -102,9 +124,9 @@ export function DeleteAccountFlow() {
       ),
     );
 
-  const resend = (purpose: 'login' | 'delete_account') =>
+  const resend = () =>
     run(async () => {
-      await requestCode(purpose);
+      await requestDeleteCode(phone);
       setInfo('Enviamos um novo código.');
     });
 
@@ -147,6 +169,7 @@ export function DeleteAccountFlow() {
               autoComplete="tel"
               required
               placeholder="(11) 98765-4321"
+              defaultValue={phone}
               className={input}
               onChange={(e) => setPhone(toE164(e.target.value))}
             />
@@ -162,14 +185,12 @@ export function DeleteAccountFlow() {
           busy={busy}
           submit="Continuar"
           onSubmit={onLoginCode}
-          onResend={resend('login')}
+          onResend={resend()}
           feedback={feedback}
         />
       )}
 
-      {step === 'confirm' && (
-        <ConfirmForm onSubmit={onConfirm} busy={busy} isNewUser={isNewUser} feedback={feedback} />
-      )}
+      {step === 'confirm' && <ConfirmForm onSubmit={onConfirm} busy={busy} feedback={feedback} />}
 
       {step === 'deleteCode' && (
         <CodeForm
@@ -180,7 +201,7 @@ export function DeleteAccountFlow() {
           submit="Excluir minha conta"
           danger
           onSubmit={onDeleteCode}
-          onResend={resend('delete_account')}
+          onResend={resend()}
           feedback={feedback}
         />
       )}
@@ -310,12 +331,10 @@ function CodeForm({
 function ConfirmForm({
   onSubmit,
   busy,
-  isNewUser,
   feedback,
 }: {
   onSubmit: (e: FormEvent) => void;
   busy: boolean;
-  isNewUser: boolean;
   feedback: ReactNode;
 }) {
   const [checked, setChecked] = useState(false);
@@ -332,11 +351,6 @@ function ConfirmForm({
         if (checked) onSubmit(e);
       }}
     >
-      {isNewUser && (
-        <p className="text-body-small text-text">
-          Não encontramos atendimentos neste número. Se continuar, apagamos o cadastro dele.
-        </p>
-      )}
       <p className="text-body text-text">
         A exclusão é definitiva: a agenda, os clientes, as conversas e a conexão com o WhatsApp
         deixam de existir e não dá para recuperar.

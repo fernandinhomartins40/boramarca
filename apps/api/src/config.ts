@@ -60,6 +60,17 @@ const Env = z.object({
   /** Per-IP limits, per 10 minutes: public site form (POST /leads) and each /auth/otp/* route. */
   RATE_LIMIT_LEADS_MAX: z.coerce.number().int().min(1).default(5),
   RATE_LIMIT_OTP_MAX: z.coerce.number().int().min(1).default(30),
+  /** Alexa (packages/alexa/.env.example). Without the three, the skill and linking answer 503. */
+  ALEXA_SKILL_ID: z.string().startsWith('amzn1.ask.skill.').optional(),
+  ALEXA_OAUTH_CLIENT_ID: z.string().min(1).optional(),
+  ALEXA_OAUTH_CLIENT_SECRET: z.string().min(16).optional(),
+  /** Fallback Voice Monkey v3 token for professionals who did not save their own. */
+  VOICE_MONKEY_TOKEN: z.string().min(1).optional(),
+  /** 32 bytes, base64: encrypts secrets stored per professional (Voice Monkey token). */
+  DATA_ENCRYPTION_KEY: z
+    .string()
+    .refine((s) => Buffer.from(s, 'base64').length === 32, '32 bytes em base64')
+    .optional(),
 });
 
 export type Config = z.infer<typeof Env>;

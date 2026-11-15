@@ -18,6 +18,8 @@ import { fail, minutesAgo, newId, nowIso, reply, uid } from './mock/util';
 /** WhatsApp conversations (prompt 06). Owner: agent C2; api implementation: D1. */
 export interface ConversationsData {
   list(query?: Partial<ConversationListQuery>): Promise<ConversationListResponse>;
+  /** GET /conversations/:id — one conversation (chat header); does not mark it as read. */
+  get(id: Id): Promise<ConversationView>;
   /** Newest first; marks the conversation as read. */
   messages(id: Id, query?: Partial<MessageListQuery>): Promise<MessageListResponse>;
   /** Sent as the professional (goes through the send guard on the API). */
@@ -159,6 +161,9 @@ export const mockConversationsData: ConversationsData = {
       .sort((a, b) => (b.lastMessageAt ?? '').localeCompare(a.lastMessageAt ?? ''))
       .map(withNext);
     return reply({ items, nextCursor: null });
+  },
+  async get(id) {
+    return reply(withNext(find(id)));
   },
   async messages(id) {
     find(id).unreadCount = 0;

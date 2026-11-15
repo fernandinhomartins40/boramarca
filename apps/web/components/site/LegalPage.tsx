@@ -15,7 +15,7 @@ export function LegalPage({
 }) {
   return (
     <main id="conteudo" className={`${container} py-xxxl`}>
-      <article className="legal mx-auto max-w-[48rem]">
+      <article className="legal mx-auto max-w-3xl">
         <h1 className="text-display text-text">{title}</h1>
         <p className="mt-sm text-caption text-text-muted">Atualizado em {updated}</p>
         {intro && <div className="mt-xl text-body text-text">{intro}</div>}

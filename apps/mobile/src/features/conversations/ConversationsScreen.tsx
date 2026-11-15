@@ -17,6 +17,7 @@ import {
 } from '@/components';
 import { data } from '@/data';
 import { useLoad, useRefreshOnFocus } from '@/features/agenda/useLoad';
+import { useRealtime } from '@/lib/realtime';
 import { useTheme } from '@/theme';
 import { FILTERS, listTime } from './format';
 
@@ -37,6 +38,7 @@ export function ConversationsScreen() {
     [filter, query],
   );
   useRefreshOnFocus(list.reload);
+  useRealtime(['message.created', 'conversation.updated'], () => void list.reload(true));
   const items = list.data?.items ?? [];
 
   const top = (

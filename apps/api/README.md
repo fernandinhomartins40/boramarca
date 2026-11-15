@@ -18,23 +18,24 @@ pnpm --filter @boramarca/api dev   # http://localhost:3333
 
 ## Módulos (`src/modules/<nome>/index.ts`, carregados pelo autoload em `/v1`)
 
-| Módulo          | Rotas                                                                                                                                                                   |
-| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `auth`          | `POST /auth/otp/request`, `/auth/otp/verify`, `/auth/refresh`, `GET/PATCH/DELETE /me`                                                                                   |
-| `catalog`       | CRUD `/services` + `POST /services/reorder`, CRUD `/working-hours` + `PUT /working-hours`, CRUD `/time-off`                                                             |
-| `clients`       | CRUD `/clients` (busca, ordem, "sumidos", cursor), `GET /clients/:id/stats`, `GET /clients/:id/appointments`                                                            |
-| `agenda`        | `GET /agenda?date=`, `GET /slots`, `POST /appointments`, `GET /appointments/:id`, `POST /appointments/:id/{reschedule,cancel,confirm,arrive,done,no-show,delay-notice}` |
-| `realtime`      | `WS /realtime?token=<accessToken>` (fecha com 4401 se o token for inválido)                                                                                             |
-| `health`        | `GET /health`, `GET /v1/health`                                                                                                                                         |
-| `whatsapp`      | `POST/DELETE /whatsapp/session`, `GET /whatsapp/{qr,pairing-code,status}`, `POST /webhooks/whatsapp/:instance`                                                          |
-| `conversations` | `GET /conversations`, `GET/POST /conversations/:id/messages`, `POST /conversations/:id/handoff`                                                                         |
-| `decisions`     | `GET /decisions`, `POST /decisions/:id/answer`, `POST /decisions/:id/take-over`                                                                                         |
-| `ai`            | `POST /ai/pause`, `POST /ai/resume`, `PATCH /ai/settings`, `POST /messages/preview`                                                                                     |
-| `devices`       | `POST /devices`, `DELETE /devices/:id`                                                                                                                                  |
-| `waitlist`      | CRUD `/waitlist`, `POST /waitlist/:id/offer`, `PATCH /waitlist/rule`                                                                                                    |
-| `voice`         | `POST /voice/command`, `GET /voice/summary?moment=open\|close`                                                                                                          |
-| `salon`         | `GET /salon/day`, `GET /salon/reports`, CRUD `/salon/team`, `GET /salon/clients` (`format=csv`), `GET /salon/plan`, `POST /kit-leads`                                   |
-| `site`          | `POST /leads` (pública, limite por IP, campo-armadilha `website`)                                                                                                       |
+| Módulo          | Rotas                                                                                                                                                                                                                              |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `auth`          | `POST /auth/otp/request`, `/auth/otp/verify`, `/auth/refresh`, `GET/PATCH/DELETE /me`                                                                                                                                              |
+| `catalog`       | CRUD `/services` + `POST /services/reorder`, CRUD `/working-hours` + `PUT /working-hours`, CRUD `/time-off`                                                                                                                        |
+| `clients`       | CRUD `/clients` (busca, ordem, "sumidos", cursor), `GET /clients/:id/stats`, `GET /clients/:id/appointments`                                                                                                                       |
+| `agenda`        | `GET /agenda?date=`, `GET /slots`, `POST /appointments`, `GET /appointments/:id`, `POST /appointments/:id/{reschedule,cancel,confirm,arrive,done,no-show,delay-notice}`                                                            |
+| `realtime`      | `WS /realtime?token=<accessToken>` (fecha com 4401 se o token for inválido)                                                                                                                                                        |
+| `health`        | `GET /health`, `GET /v1/health`                                                                                                                                                                                                    |
+| `whatsapp`      | `POST/DELETE /whatsapp/session`, `GET /whatsapp/{qr,pairing-code,status}`, `POST /webhooks/whatsapp/:instance`                                                                                                                     |
+| `conversations` | `GET /conversations`, `GET /conversations/:id`, `GET/POST /conversations/:id/messages`, `POST /conversations/:id/handoff`                                                                                                          |
+| `decisions`     | `GET /decisions`, `POST /decisions/:id/answer`, `POST /decisions/:id/take-over`                                                                                                                                                    |
+| `ai`            | `POST /ai/pause`, `POST /ai/resume`, `PATCH /ai/settings`, `POST /messages/preview`                                                                                                                                                |
+| `devices`       | `POST /devices`, `DELETE /devices/:id`                                                                                                                                                                                             |
+| `waitlist`      | CRUD `/waitlist`, `POST /waitlist/:id/offer`, `PATCH /waitlist/rule`                                                                                                                                                               |
+| `voice`         | `POST /voice/command`, `GET /voice/summary?moment=open\|close`                                                                                                                                                                     |
+| `salon`         | `GET /salon/day`, `GET /salon/reports`, CRUD `/salon/team`, `GET /salon/clients` (`format=csv`, `onWaitlist`), `GET /salon/plan`, `POST /salon/decisions/:id/answer`, `POST /salon/appointments/:id/reschedule`, `POST /kit-leads` |
+| `site`          | `POST /leads` (pública, limite por IP, campo-armadilha `website`)                                                                                                                                                                  |
+| `alexa`         | `POST /alexa/skill` (assinatura da Amazon), `GET/POST /alexa/oauth/authorize`, `POST /alexa/oauth/token`, `GET/PATCH /alexa/settings`                                                                                              |
 
 Peças transversais:
 
@@ -178,11 +179,81 @@ Usam a infraestrutura do Docker: banco `boramarca_test` (recriado do zero a cada
   profissional e dos clientes; instância removida; dono com equipe (transferir / espaço inteiro).
 - `salon.test.ts` — relatórios com o seed (`seedDemo(db, now)`, `src/db/seed-demo.ts`), dia,
   equipe, plano, CSV, acesso só do dono. `rate-limit.test.ts` — limites por IP.
-- `routes.test.ts` — falha se alguma rota do contrato (exceto Alexa) não tiver handler.
+- `routes.test.ts` — falha se alguma rota do contrato não tiver handler.
+- `alexa.test.ts` — requisição assinada (CA de teste gerada no teste, verificador injetado),
+  vínculo de conta ponta a ponta (authorize → code → token → refresh → a skill reconhece o
+  profissional e responde decisão com `via: 'alexa'`), PKCE errado/código reusado, anúncio do
+  Voice Monkey com HTTP simulado e token cifrado.
+- `review.test.ts` — conta de revisão com a Evolution configurada: entra, agenda, decisão
+  simulada pelo WhatsApp de demonstração, responde, exclui e recria; `EvolutionGateway` nunca
+  chamado; telefone de conta real recusado; dados em sábado e domingo.
+- `salon-owner.test.ts` — dono responde decisão e remarca atendimento de alguém da equipe (motor
+  de agenda, `audit_log` com `ownerId`), 404 para outro espaço, 403 para quem não é dono; filtro
+  `onWaitlist`.
+- `gaps.test.ts` — `GET /conversations/:id` e o `verify` depois de um código `delete_account`.
+- `logger.test.ts` — telefone, texto, código e tokens censurados; URL sem query string.
 - `messaging.test.ts` — ponta a ponta com `FakeGateway`/`FakeLlm`/`FakePush`, filas reais: fluxo do
   PDF (passos 1–7, incluindo o prazo esgotado e a expiração), mensagem duplicada, segredo errado, IA
   pausada, `change_other_client` travado, ids de outro profissional recusados, assumir/devolver
   conversa, áudio, guarda bloqueando destinatário desconhecido, prévia e dispositivos.
+
+## Alexa (`src/modules/alexa`, plano seção 14)
+
+- `POST /v1/alexa/skill`: escopo próprio com parser de JSON que entrega o **corpo cru** (`Buffer`)
+  para `createAlexaRequestHandler` (assinatura `Signature-256`, cadeia até CA confiável, carimbo
+  ± 150 s). Portas: `professionalIdFromToken` (tabela `alexa_tokens`), `voiceCommand` (o mesmo
+  `createVoice().command` de `POST /voice/command`, com o `AbortSignal` repassado à chamada da IA),
+  `decisions.list` e `decisions.answer` com `via: 'alexa'`. Sem `ALEXA_SKILL_ID`: 503.
+- Vínculo de conta (OAuth 2.0 código + PKCE): `GET /v1/alexa/oauth/authorize` valida o pedido
+  (`parseAuthorizeRequest`; erro = página com mensagem, nunca redireciona) e mostra a página de
+  login (HTML servido pela API, só tokens de `theme.ts` e o logo do kit, sem JavaScript nem
+  pop-up). O formulário volta por `POST` na mesma URL: telefone → código (mesmo `OtpSender` do
+  app) → código de uso único de 5 min ligado ao `code_challenge` → `303` para a Amazon.
+  Só entra quem já tem conta (número desconhecido: 404, nada é criado). `POST
+/v1/alexa/oauth/token` (form-urlencoded, Basic ou credenciais no corpo): troca o código
+  (`verifyPkce`, mesmo `redirect_uri`) ou renova; tokens guardados só como SHA-256, access de 1 h,
+  refresh sem validade (apagar a linha desfaz o vínculo; excluir a conta apaga em cascata).
+- Ajustes por profissional em `alexa_settings` (`GET/PATCH /v1/alexa/settings`): anúncio
+  ligado, dispositivo e o **token do Voice Monkey da conta do próprio profissional**, cifrado com
+  AES-256-GCM (`DATA_ENCRYPTION_KEY`, `src/lib/secret-box.ts`) e nunca devolvido
+  (`voiceMonkeyTokenSet`). Sem token próprio, usa `VOICE_MONKEY_TOKEN` se existir.
+- Anúncio: `decisions.onCreated` → lê os ajustes fora do fluxo (fire-and-forget) →
+  `createDecisionAnnouncer`; falha do Voice Monkey só vai para o log.
+
+## Conta de revisão das lojas (`REVIEW_PHONE` + `REVIEW_OTP`)
+
+- `POST /auth/otp/request` com `REVIEW_PHONE` não envia nada (funciona sem provedor de SMS);
+  `POST /auth/otp/verify` com `REVIEW_OTP` chama `ensureReviewAccount` (`src/db/seed-review.ts`):
+  espaço próprio "Espaço Demonstração (revisão)", uma profissional, 5 clientes fictícios, 5
+  atendimentos no dia de hoje (qualquer dia da semana: expediente de domingo a domingo) e uma
+  Decisão pendente. Idempotente: recria se não existe (inclusive depois de o revisor excluir a
+  conta) e renova se a agenda de hoje está vazia. `pnpm db:seed` também a cria quando as
+  variáveis existem.
+- WhatsApp sempre simulado: a sessão é `demo-<id>` e o `RoutingGateway` manda `demo-*` para o
+  `FakeGateway` (conecta sozinho 5 s depois do QR); a Evolution nunca é chamada (teste).
+- Isolamento: é uma conta comum (escopo por profissional), sem equipe; não alcança dados de
+  outros. Se `REVIEW_PHONE` pertencer a uma conta que não é a de revisão, o login com o código fixo
+  é recusado (403 `REVIEW_PHONE_IN_USE`).
+
+## Exclusão de conta pelo site sem criar cadastro
+
+`POST /auth/otp/verify` olha qual código está pendente: se só existe um código `delete_account`
+(o site pediu o código já para excluir), o login funciona para conta existente e **número sem conta
+responde 404 `ACCOUNT_NOT_FOUND`, sem criar nada**. O código é gasto no login; `DELETE /me` pede
+outro `delete_account`. Com código `login` o comportamento do app não muda.
+
+## Logs
+
+`src/lib/logger.ts`: censura `phone`, `toPhone`, `fromPhone`, `text`, `code`, tokens, segredos do
+OAuth e headers de autenticação (no nível de cima e um abaixo) e tira a query string das URLs
+(`/realtime?token=`, `pairing-code?phone=`). O código de desenvolvimento vai na mensagem do log
+(só fora de produção).
+
+## Imagens e produção
+
+`infra/docker/api.Dockerfile` (contexto = raiz do repositório): `pnpm deploy --prod` da API, roda
+como `node` com `node --import tsx src/server.ts`; migrações no serviço `migrate` do
+`infra/docker-compose.prod.yml`. Ver `docs/pendencias/D4.md`.
 
 ## Variáveis
 

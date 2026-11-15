@@ -48,6 +48,8 @@ export const SalonReportsResponse = z.object({
   recoveredValueCents: Cents,
   /** 0..1 */
   noShowRate: z.number().min(0).max(1),
+  /** Appointments done in the month (whole salon). Optional for older clients/mocks. */
+  appointmentsDoneCount: z.number().int().nonnegative().optional(),
   occupancyByProfessional: z.array(
     z.object({ professionalId: Id, name: z.string(), occupancyRate: z.number().min(0).max(1) }),
   ),
@@ -79,6 +81,11 @@ export const SalonClientsQuery = z.object({
   search: z.string().trim().max(120).optional(),
   inactiveDays: z.coerce.number().int().positive().optional(),
   professionalId: Id.optional(),
+  /** `true`: only clients on the waitlist; `false`: only those not on it. */
+  onWaitlist: z
+    .enum(['true', 'false'])
+    .transform((v) => v === 'true')
+    .optional(),
   format: z.enum(['json', 'csv']).default('json'),
   cursor: z.string().optional(),
   limit: z.coerce.number().int().min(1).max(500).default(100),

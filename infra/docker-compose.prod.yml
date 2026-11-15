@@ -1,0 +1,181 @@
+# Production on one VPS (2–4 GB): Caddy (TLS) → web + api; Postgres, Redis and Evolution only on
+# the internal network. No secrets here: everything comes from infra/.env.prod (not versioned;
+# template with comments: infra/.env.prod.example). The same file feeds the interpolation below
+# (--env-file) and the API process (env_file).
+#
+#   docker compose -f infra/docker-compose.prod.yml --env-file infra/.env.prod up -d --build
+#
+# Image versions are pinned (plan rule 8). First deploy: docs/pendencias/D4.md.
+name: boramarca-prod
+
+x-service: &service
+  restart: unless-stopped
+  logging:
+    driver: json-file
+    options: { max-size: '10m', max-file: '5' }
+
+x-api-env: &api-env
+  NODE_ENV: production
+  TRUST_PROXY: 'true'
+  DATABASE_URL: postgres://${POSTGRES_USER:-boramarca}:${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD}@postgres:5432/boramarca
+  REDIS_URL: redis://:${REDIS_PASSWORD:?defina REDIS_PASSWORD}@redis:6379/0
+  EVOLUTION_BASE_URL: http://evolution:8080
+  EVOLUTION_API_KEY: ${EVOLUTION_API_KEY:?defina EVOLUTION_API_KEY}
+  # Evolution calls the API's webhook inside the Docker network.
+  PUBLIC_API_URL: http://api:3333
+  CORS_ORIGINS: https://${SITE_DOMAIN},https://www.${SITE_DOMAIN}
+
+x-api-env-file: &api-env-file
+  # Optional only so `docker compose config` works with the example file; the API refuses to
+  # start without its required variables (JWT secrets).
+  - path: .env.prod
+    required: false
+
+services:
+  caddy:
+    <<: *service
+    image: caddy:2.10.2-alpine
+    ports:
+      - '80:80'
+      - '443:443'
+      - '443:443/udp'
+    environment:
+      SITE_DOMAIN: ${SITE_DOMAIN:?defina SITE_DOMAIN}
+      API_DOMAIN: ${API_DOMAIN:?defina API_DOMAIN}
+      ACME_EMAIL: ${ACME_EMAIL:?defina ACME_EMAIL}
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      api: { condition: service_healthy }
+      web: { condition: service_healthy }
+    deploy: { resources: { limits: { memory: 128m } } }
+
+  web:
+    <<: *service
+    build:
+      context: ..
+      dockerfile: infra/docker/web.Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: https://${API_DOMAIN}
+        NEXT_PUBLIC_SITE_URL: https://${SITE_DOMAIN}
+        NEXT_PUBLIC_SUPPORT_EMAIL: ${SUPPORT_EMAIL:-}
+        NEXT_PUBLIC_PLAY_URL: ${PLAY_URL:-}
+        NEXT_PUBLIC_APPSTORE_URL: ${APPSTORE_URL:-}
+    image: boramarca-web:${RELEASE:-latest}
+    deploy: { resources: { limits: { memory: 384m } } }
+
+  # One-shot: applies the Drizzle migrations; the API starts only after it succeeds.
+  migrate:
+    image: boramarca-api:${RELEASE:-latest}
+    command: ['node', '--import', 'tsx', 'src/db/migrate.ts']
+    env_file: *api-env-file
+    environment: *api-env
+    depends_on:
+      postgres: { condition: service_healthy }
+    restart: 'no'
+
+  api:
+    <<: *service
+    build:
+      context: ..
+      dockerfile: infra/docker/api.Dockerfile
+    image: boramarca-api:${RELEASE:-latest}
+    env_file: *api-env-file
+    environment: *api-env
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      redis: { condition: service_healthy }
+      evolution: { condition: service_healthy }
+    deploy: { resources: { limits: { memory: 512m } } }
+
+  postgres:
+    <<: *service
+    image: postgres:17.12-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-boramarca}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD}
+      POSTGRES_DB: boramarca
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./postgres/init.prod.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U $${POSTGRES_USER} -d boramarca']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    deploy: { resources: { limits: { memory: 512m } } }
+
+  redis:
+    <<: *service
+    image: redis:8.8.4-alpine
+    # AOF: BullMQ jobs (deadlines, reminders) survive a restart. noeviction: BullMQ requirement.
+    command:
+      - sh
+      - -c
+      - exec redis-server --appendonly yes --maxmemory 200mb --maxmemory-policy noeviction --requirepass "$${REDIS_PASSWORD}"
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?defina REDIS_PASSWORD}
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ['CMD-SHELL', 'redis-cli -a "$${REDIS_PASSWORD}" --no-auth-warning ping | grep -q PONG']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    deploy: { resources: { limits: { memory: 256m } } }
+
+  evolution:
+    <<: *service
+    # Official image (Evolution API v2), same pin as infra/docker-compose.yml.
+    image: evoapicloud/evolution-api:v2.3.7
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    environment:
+      SERVER_TYPE: http
+      SERVER_PORT: 8080
+      SERVER_URL: http://evolution:8080
+      AUTHENTICATION_API_KEY: ${EVOLUTION_API_KEY:?defina EVOLUTION_API_KEY}
+      DATABASE_PROVIDER: postgresql
+      DATABASE_CONNECTION_URI: postgresql://${POSTGRES_USER:-boramarca}:${POSTGRES_PASSWORD}@postgres:5432/evolution?schema=evolution_api
+      DATABASE_CONNECTION_CLIENT_NAME: boramarca_evolution
+      # Bora Marca keeps its own copy of messages; Evolution stores only what it needs.
+      DATABASE_SAVE_DATA_INSTANCE: 'true'
+      DATABASE_SAVE_DATA_NEW_MESSAGE: 'false'
+      DATABASE_SAVE_MESSAGE_UPDATE: 'false'
+      DATABASE_SAVE_DATA_CONTACTS: 'false'
+      DATABASE_SAVE_DATA_CHATS: 'false'
+      DATABASE_SAVE_DATA_LABELS: 'false'
+      DATABASE_SAVE_DATA_HISTORIC: 'false'
+      CACHE_REDIS_ENABLED: 'true'
+      CACHE_REDIS_URI: redis://:${REDIS_PASSWORD}@redis:6379/6
+      CACHE_REDIS_PREFIX_KEY: evolution
+      CACHE_REDIS_SAVE_INSTANCES: 'false'
+      CACHE_LOCAL_ENABLED: 'false'
+      CONFIG_SESSION_PHONE_CLIENT: Bora Marca
+      CONFIG_SESSION_PHONE_NAME: Chrome
+      QRCODE_LIMIT: 30
+      DEL_INSTANCE: 'false'
+      TELEMETRY_ENABLED: 'false'
+      LOG_LEVEL: ERROR,WARN
+      LANGUAGE: pt-BR
+      # The API registers per-instance webhooks; the global one stays off.
+      WEBHOOK_GLOBAL_ENABLED: 'false'
+    volumes:
+      - evolution_instances:/evolution/instances
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -q -O /dev/null http://127.0.0.1:8080/ || exit 1']
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+    deploy: { resources: { limits: { memory: 1g } } }
+
+volumes:
+  caddy_data:
+  caddy_config:
+  postgres_data:
+  redis_data:
+  evolution_instances:
