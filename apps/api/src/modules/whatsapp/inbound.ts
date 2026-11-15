@@ -2,7 +2,11 @@
 import { and, asc, desc, eq, gt, inArray, lt, ne, sql } from 'drizzle-orm';
 import type { Job } from 'bullmq';
 import { buildContext, interpretClientMessage } from '@boramarca/ia';
-import { ACTIVE_APPOINTMENT_STATUSES, type WhatsAppStatusResponse } from '@boramarca/shared';
+import {
+  ACTIVE_APPOINTMENT_STATUSES,
+  HEALTH_PROFESSIONS,
+  type WhatsAppStatusResponse,
+} from '@boramarca/shared';
 import type { InboundMessageEvent } from '@boramarca/whatsapp';
 import {
   appointments,
@@ -210,9 +214,13 @@ export function createInbound(
     let m = row.m;
     const notifyApp = async (reason: string) => {
       await audit(db, pid, 'system', 'ai.skipped', { messageId: m.id, reason });
+      // Health accounts: the text (a symptom, say) does not travel through Expo/Google/Apple (B3).
+      const health = pro.p.professions.some((x) => HEALTH_PROFESSIONS.includes(x));
       await deps.notify(pid, 'message', {
         title: `${row.client.name} mandou mensagem`,
-        body: (m.text ?? m.transcription ?? 'Áudio').slice(0, 120),
+        body: health
+          ? 'Toque para ver a mensagem.'
+          : (m.text ?? m.transcription ?? 'Áudio').slice(0, 120),
         data: { type: 'message', conversationId: row.conv.id },
       });
       return { status: 'skipped', reason };
@@ -237,16 +245,17 @@ export function createInbound(
     const text = (m.text ?? m.transcription ?? '').trim();
     if (!text) return notifyApp('empty');
 
+    // Step 5: AI off, paused, or the professional took over. Before the waitlist: a "sim" to an
+    // offer then waits for the professional instead of booking by itself (M5).
+    const now = core.now();
+    if (!aiActive(pro.p, now)) return notifyApp('ai_paused');
+    if (row.conv.handler === 'human') return notifyApp('human_handler');
+
     // A clear "sim"/"não" to an open waitlist offer is settled by the waitlist itself.
     if (await deps.waitlist.handleClientReply(pid, row.client.id, text)) {
       await audit(db, pid, 'system', 'waitlist.reply_handled', { messageId: m.id });
       return { status: 'waitlist' };
     }
-
-    // Step 5: AI off, paused, or the professional took over.
-    const now = core.now();
-    if (!aiActive(pro.p, now)) return notifyApp('ai_paused');
-    if (row.conv.handler === 'human') return notifyApp('human_handler');
     if (!core.llm) return notifyApp('ai_unavailable');
 
     // Step 6: reduced context -> validated tool calls.

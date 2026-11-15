@@ -15,6 +15,7 @@ import { firstName, renderMessage } from '@boramarca/ia';
 import { audit } from '../lib/audit';
 import { loadPro, type Core } from '../lib/core';
 import { createQueues } from '../lib/queues';
+import { purgeExpired, RETENTION_CRON } from '../lib/retention';
 import { createReminders } from '../modules/agenda/reminders';
 import { createToolRunner } from '../modules/ai/tools';
 import { createDecisions } from '../modules/decisions/service';
@@ -28,6 +29,8 @@ import {
 import { createInbound } from '../modules/whatsapp/inbound';
 import { createOutbox } from '../modules/whatsapp/send';
 import { createWaitlist } from '../modules/waitlist/service';
+
+const RETENTION_JOB = 'retention';
 
 export interface MessagingOverrides {
   gateway?: WhatsAppGateway;
@@ -136,7 +139,20 @@ export default fp<{ overrides?: MessagingOverrides }>(async (app, { overrides = 
   // Per-instance lock inside: one send per WhatsApp instance at a time.
   queues.startWorker('outbound', (j, t) => m.outbox.process(j, t), 8, onError);
   queues.startWorker('decisions', (j) => m.decisions.process(j), 4, onError);
-  queues.startWorker('reminders', (j) => m.reminders.process(j), 4, onError);
+  queues.startWorker(
+    'reminders',
+    (j) => (j.name === RETENTION_JOB ? purgeExpired(app.db, app.now()) : m.reminders.process(j)),
+    4,
+    onError,
+  );
+  // Daily retention (leads 12 months, audit_log 90 days); one schedule shared by every instance.
+  // Not under vitest: "production" test apps share the test Redis and must not leave a schedule.
+  if (!process.env.VITEST)
+    await queues.queues.reminders.upsertJobScheduler(
+      RETENTION_JOB,
+      { pattern: RETENTION_CRON },
+      { name: RETENTION_JOB },
+    );
   queues.startWorker('waitlist', (j) => m.waitlist.process(j), 2, onError);
 
   // "Avisar o cliente" from the app (create/reschedule/cancel) goes out through the guard;

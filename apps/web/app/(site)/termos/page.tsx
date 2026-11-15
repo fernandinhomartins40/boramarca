@@ -94,11 +94,14 @@ export default function TermosPage() {
       <ul>
         <li>
           A IA só faz sozinha o que você permitir nos ajustes. Mudanças no horário de outro cliente
-          sempre passam por você e não podem ser liberadas.
+          sempre passam por você e não podem ser liberadas. Com a IA pausada ou desligada, ou numa
+          conversa que você assumiu, ela não manda nada ao cliente nem marca nada: você só recebe o
+          aviso no app.
         </li>
         <li>
           Se você não responder a um pedido a tempo, a IA manda uma mensagem neutra ao cliente
-          (&ldquo;Já te confirmo!&rdquo;) e não marca nada por conta própria.
+          (&ldquo;Já te confirmo!&rdquo;) e não marca nada por conta própria (com a IA pausada ou
+          com a conversa assumida por você, nem essa mensagem sai).
         </li>
         <li>
           A IA pode entender errado. Confira as conversas no app e assuma o atendimento quando

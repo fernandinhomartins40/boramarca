@@ -234,6 +234,14 @@ const alexa: FastifyPluginAsync = async (app) => {
     return settingsView(pid);
   });
 
+  // M4: revoking the Alexa consent without deleting the account (the privacy policy promises it).
+  route(app, a.unlink, async (req) => {
+    const pid = req.scope.professionalId;
+    await store.unlink(pid);
+    await audit(db, pid, 'professional', 'alexa.unlinked');
+    return settingsView(pid);
+  });
+
   // ---- Proactive announcement: off unless the professional turned it on with a device.
   async function announce(d: DecisionView) {
     const [s] = await db

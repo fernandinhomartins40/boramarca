@@ -53,7 +53,9 @@ export const OtpVerifyResponse = AuthTokens.extend({
 });
 export type OtpVerifyResponse = z.infer<typeof OtpVerifyResponse>;
 
-// ---- POST /auth/refresh
+// ---- POST /auth/refresh (rotates: each refresh token works once; reusing an old one ends the
+// session) and POST /auth/logout. A `delete_account` code gives a session that only works on
+// `DELETE /me` and `GET /salon/team`, and does not refresh.
 export const RefreshBody = z.object({ refreshToken: z.string().min(1) });
 export type RefreshBody = z.infer<typeof RefreshBody>;
 export const RefreshResponse = AuthTokens;

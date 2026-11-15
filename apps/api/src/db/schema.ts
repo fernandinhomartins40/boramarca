@@ -1,6 +1,7 @@
 // Drizzle schema for every table of plan section 3. Enum values come from @boramarca/shared.
 // The appointment overlap guard (btree_gist EXCLUDE) is not expressible in Drizzle: it lives in
 // the custom migration drizzle/0001_appointments_no_overlap.sql.
+import { sql } from 'drizzle-orm';
 import {
   boolean,
   index,
@@ -132,6 +133,8 @@ export const professionals = pgTable(
       .default(DEFAULT_WAITLIST_RULE),
     skipMessagePreview: boolean('skip_message_preview').notNull().default(false),
     voiceRate: real('voice_rate').notNull().default(1),
+    /** null = team invite not accepted yet: set when the person first logs in with their code. */
+    joinedAt: ts('joined_at').defaultNow(),
   },
   (t) => [index('professionals_salon_idx').on(t.salonId)],
 );
@@ -148,6 +151,22 @@ export const otpCodes = pgTable(
   },
   (t) => [uniqueIndex('otp_codes_phone_purpose_uq').on(t.phone, t.purpose)],
 );
+
+/**
+ * App refresh-token rotation (plan section 9). One row per login ("family"): `gen` is the
+ * generation of the only refresh token still valid. A token login issues is gen 0 (no row yet);
+ * reusing an older one, or logging out, sets `revokedAt` and the whole family stops working.
+ */
+export const refreshFamilies = pgTable('refresh_families', {
+  ...base,
+  professionalId: uuid('professional_id')
+    .notNull()
+    .references(() => professionals.id, { onDelete: 'cascade' }),
+  gen: integer('gen').notNull(),
+  revokedAt: ts('revoked_at'),
+  /** Past this the family's last token expired too: the row can be purged. */
+  expiresAt: ts('expires_at').notNull(),
+});
 
 export const devices = pgTable(
   'devices',
@@ -477,8 +496,12 @@ export const alexaTokens = pgTable(
       .references(() => professionals.id, { onDelete: 'cascade' }),
     accessTokenHash: text('access_token_hash').notNull(),
     accessExpiresAt: ts('access_expires_at').notNull(),
-    /** Refresh tokens do not expire (Alexa accepts that); deleting the row unlinks. */
+    /** Rotated on every refresh; deleting the row unlinks. */
     refreshTokenHash: text('refresh_token_hash').notNull(),
+    /** Unused this long (ALEXA_REFRESH_IDLE_DAYS), the link ends. */
+    refreshExpiresAt: ts('refresh_expires_at')
+      .notNull()
+      .default(sql`now() + interval '90 days'`),
   },
   (t) => [
     uniqueIndex('alexa_tokens_access_uq').on(t.accessTokenHash),

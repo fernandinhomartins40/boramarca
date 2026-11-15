@@ -13,6 +13,7 @@ import {
   whatsappSessions,
   workingHours,
 } from '../../db/schema';
+import { REVIEW_SALON_NAME } from '../../db/seed-review';
 import { audit } from '../../lib/audit';
 import { AppError, notFound, pgCode, PG_UNIQUE } from '../../lib/errors';
 import { route } from '../../lib/route';
@@ -116,11 +117,16 @@ const salon: FastifyPluginAsync = async (app) => {
 
   route(app, s.team.list, async (req) => ({ items: await members(req.scope.salonId) }));
   route(app, s.team.get, async (req) => member(req.scope.salonId, req.params.id));
+  // A new member is an invite (joinedAt null) until that person logs in with a code sent to the
+  // number (M11). A number that already has an account is refused (409), never moved.
   route(app, s.team.create, async (req) => {
+    const [own] = await db.select().from(salons).where(eq(salons.id, req.scope.salonId));
+    if (own?.name === REVIEW_SALON_NAME)
+      throw new AppError(403, 'FORBIDDEN', 'A conta de demonstração não cadastra equipe');
     const [p] = await uniquePhone(() =>
       db
         .insert(professionals)
-        .values({ ...req.body, salonId: req.scope.salonId, role: 'professional' })
+        .values({ ...req.body, salonId: req.scope.salonId, role: 'professional', joinedAt: null })
         .returning(),
     );
     await audit(db, req.scope.professionalId, 'professional', 'salon.team_added', {
@@ -129,7 +135,10 @@ const salon: FastifyPluginAsync = async (app) => {
     return member(req.scope.salonId, p!.id);
   });
   route(app, s.team.update, async (req) => {
-    await member(req.scope.salonId, req.params.id);
+    const cur = await member(req.scope.salonId, req.params.id);
+    // The phone is the member's login: changing it would hand their account to another number.
+    if (req.body.phone !== undefined && req.body.phone !== cur.phone)
+      throw new AppError(409, 'PHONE_LOCKED', 'O telefone de um profissional não pode ser trocado');
     if (Object.keys(req.body).length)
       await uniquePhone(() =>
         db

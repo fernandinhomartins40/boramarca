@@ -637,12 +637,15 @@ export function createAgenda(deps: AgendaDeps) {
     to: AppointmentStatus,
     type: AppointmentEventType,
     description: string,
-    extra: { cancelReason?: string } = {},
+    extra: { cancelReason?: string; afterStart?: boolean } = {},
   ) {
     return db.transaction(async (tx) => {
       const a = await lockOwn(tx, ctx.professionalId, id);
       if (!from.includes(a.status))
         throw new AppError(409, 'INVALID_STATUS', 'Esse agendamento não está mais nesse estado');
+      // Arrived/done only once the time has come (M8: a future "done" is not a past visit).
+      if (extra.afterStart && a.startsAt > now())
+        throw new AppError(409, 'NOT_STARTED', 'Esse horário ainda não começou');
       await tx
         .update(appointments)
         .set({
@@ -690,9 +693,10 @@ export function createAgenda(deps: AgendaDeps) {
       to: AppointmentStatus,
       type: AppointmentEventType,
       verb: string,
+      afterStart = false,
     ) =>
     async (ctx: AgendaCtx, id: string): Promise<AppointmentView> => {
-      await transition(ctx, id, from, to, type, `${WHO[ctx.actor]} ${verb}`);
+      await transition(ctx, id, from, to, type, `${WHO[ctx.actor]} ${verb}`, { afterStart });
       const v = await view(db, ctx.professionalId, id);
       await announce(ctx, 'status', v);
       return v;
@@ -715,12 +719,14 @@ export function createAgenda(deps: AgendaDeps) {
       'in_service',
       'arrived',
       'registrou a chegada',
+      true,
     ),
     markDone: statusAction(
       ['scheduled', 'confirmed', 'in_service'],
       'done',
       'done',
       'concluiu o atendimento',
+      true,
     ),
     markNoShow: statusAction(['scheduled', 'confirmed'], 'no_show', 'no_show', 'marcou falta'),
     /** Runs after every committed change (B1/C1: client message, reminder jobs). Returns unsubscribe. */

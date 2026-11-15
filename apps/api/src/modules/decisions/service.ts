@@ -19,7 +19,7 @@ import {
 } from '@boramarca/shared';
 import { aiDecisions, clients, conversations, messages } from '../../db/schema';
 import { audit } from '../../lib/audit';
-import { loadPro, type Core, type ProRow } from '../../lib/core';
+import { aiActive, loadPro, type Core, type ProRow } from '../../lib/core';
 import { AppError, notFound } from '../../lib/errors';
 import { realtimeEvent } from '../../lib/event-bus';
 import { wire } from '../../lib/serialize';
@@ -117,19 +117,17 @@ export function createDecisions(core: Core, deps: { outbox: Outbox; notify: Noti
         proposedAction: input.proposedAction,
         context: {
           clientFirstName,
-          messages: recent
-            .reverse()
-            .flatMap((m) =>
-              (m.text ?? m.transcription)
-                ? [
-                    {
-                      author: m.author,
-                      text: (m.text ?? m.transcription)!,
-                      at: m.createdAt.toISOString(),
-                    },
-                  ]
-                : [],
-            ),
+          messages: recent.reverse().flatMap((m) =>
+            (m.text ?? m.transcription)
+              ? [
+                  {
+                    author: m.author,
+                    text: (m.text ?? m.transcription)!,
+                    at: m.createdAt.toISOString(),
+                  },
+                ]
+              : [],
+          ),
           extra: input.extra,
         },
         deadlineAt: new Date(now.getTime() + deadlineMin * MIN),
@@ -320,6 +318,17 @@ export function createDecisions(core: Core, deps: { outbox: Outbox; notify: Noti
     return { decision: v, conversationId: d.conversationId };
   }
 
+  /** The assistant may still talk to this client: AI on and the conversation not taken over (B9). */
+  async function aiMayReply(d: DecisionRow, pro: ProRow) {
+    if (!d.clientId || !aiActive(pro.p, core.now())) return false;
+    if (!d.conversationId) return true;
+    const [c] = await db
+      .select({ handler: conversations.handler })
+      .from(conversations)
+      .where(eq(conversations.id, d.conversationId));
+    return c?.handler !== 'human';
+  }
+
   /** Deadline passed: neutral reply to the client, the Decision stays pending (plan rule 2). */
   async function handleTimeout(decisionId: string) {
     const [d] = await db.select().from(aiDecisions).where(eq(aiDecisions.id, decisionId));
@@ -329,10 +338,10 @@ export function createDecisions(core: Core, deps: { outbox: Outbox; notify: Noti
       .update(aiDecisions)
       .set({ timeoutNotifiedAt: core.now() })
       .where(eq(aiDecisions.id, d.id));
-    if (d.clientId)
+    if (await aiMayReply(d, pro))
       await deps.outbox.enqueue({
         professionalId: d.professionalId,
-        clientId: d.clientId,
+        clientId: d.clientId!,
         text: renderMessage('hold', pro.p.aiTone, {
           now: core.now().toISOString(),
           timezone: pro.salon.timezone,
@@ -367,10 +376,10 @@ export function createDecisions(core: Core, deps: { outbox: Outbox; notify: Noti
     if (!d) return;
     await removeJobs(d.id);
     const pro = await loadPro(db, d.professionalId);
-    if (d.clientId)
+    if (await aiMayReply(d, pro))
       await deps.outbox.enqueue({
         professionalId: d.professionalId,
-        clientId: d.clientId,
+        clientId: d.clientId!,
         text: renderMessage('decision_expired', pro.p.aiTone, {
           now: core.now().toISOString(),
           timezone: pro.salon.timezone,

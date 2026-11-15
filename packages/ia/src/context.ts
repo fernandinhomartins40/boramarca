@@ -34,6 +34,7 @@ export interface ClientMessageInput {
   services: { id: string; name: string; durationMinutes: number; priceCents: number | null }[];
   day: {
     date: string; // YYYY-MM-DD, salon timezone
+    /** Of other clients only the time goes out (as "ocupado"). */
     appointments: {
       id: string;
       clientId: string;
@@ -129,9 +130,11 @@ export function buildContext(input: ClientMessageInput): AiContext {
     '',
     `Agenda de hoje (${input.day.date}):`,
     ...(input.day.appointments.length
-      ? input.day.appointments.map(
-          (x) =>
-            `- ${hm(x.startsAt)}–${hm(x.endsAt)} | ${firstName(x.clientName)} (clientId ${x.clientId}) | ${x.serviceNames.join(' + ')} | ${x.status} | appointmentId ${x.id}`,
+      ? input.day.appointments.map((x) =>
+          // Other clients are only "ocupado": no name, service or id leaves (LGPD, health accounts).
+          x.clientId === input.client.id
+            ? `- ${hm(x.startsAt)}–${hm(x.endsAt)} | ${clientFirst} (este cliente) | ${x.serviceNames.join(' + ')} | ${x.status} | appointmentId ${x.id}`
+            : `- ${hm(x.startsAt)}–${hm(x.endsAt)} | ocupado`,
         )
       : ['- livre o dia todo']),
     `Vagas livres hoje: ${input.day.freeSlots.length ? input.day.freeSlots.map(hm).join(', ') : 'nenhuma'}.`,

@@ -29,6 +29,13 @@
       "when": 1794756818548,
       "tag": "0003_alexa",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1794780862652,
+      "tag": "0004_security_review",
+      "breakpoints": true
     }
   ]
 }

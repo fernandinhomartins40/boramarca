@@ -97,8 +97,8 @@ describe('cadastro, clientes e agenda via HTTP', () => {
   it('book, slots, day summary and client stats', async () => {
     const date = '2030-03-04';
     for (const [d, status] of [
-      ['2030-02-04', 'done'],
-      ['2030-02-25', 'done'],
+      ['2026-02-04', 'done'],
+      ['2026-02-25', 'done'],
     ] as const) {
       const v = (
         await call('POST', '/v1/appointments', {
@@ -143,7 +143,7 @@ describe('cadastro, clientes e agenda via HTTP', () => {
       visitsCount: 2,
       averageTicketCents: 15000,
       averageIntervalDays: 21,
-      lastVisitAt: at('2030-02-25', '09:00'),
+      lastVisitAt: at('2026-02-25', '09:00'),
       nextAppointmentAt: at(date, '14:00'),
     });
     const list = ClientListResponse.parse((await call('GET', '/v1/clients')).json());

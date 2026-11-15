@@ -11,8 +11,8 @@ const accountNotFound = () =>
   new AppError(404, 'ACCOUNT_NOT_FOUND', 'Não existe conta com este número.');
 
 /**
- * Which code the person asked for: `delete_account` when only that one is pending. The account
- * deletion page asks for it first, so checking a number that has no account creates nothing.
+ * Dev code (123456) only: it matches any purpose, so pick `delete_account` when only that one is
+ * pending (the deletion page asks for it first; checking a number then creates nothing).
  */
 async function pendingPurpose(app: FastifyInstance, phone: string): Promise<OtpPurpose> {
   const rows = await app.db
@@ -32,20 +32,32 @@ export async function verifyLogin(
   phone: string,
   code: string,
   opts: { createAccount: boolean },
-): Promise<{ scope: Scope; isNewUser: boolean }> {
+): Promise<{ scope: Scope; isNewUser: boolean; purpose: OtpPurpose }> {
   const { db, config } = app;
   if (isReviewPhone(config, phone)) {
-    await consumeOtp(db, config, phone, code, 'login');
+    await consumeOtp(app, phone, code, ['login']);
     const r = await ensureReviewAccount(db, phone, app.now());
-    return { scope: r, isNewUser: false };
+    return { scope: r, isNewUser: false, purpose: 'login' };
   }
-  const purpose = opts.createAccount ? await pendingPurpose(app, phone) : 'login';
-  await consumeOtp(db, config, phone, code, purpose);
+  // Whichever pending code the person typed (a login code asked meanwhile must not block deletion).
+  const purposes: OtpPurpose[] = !opts.createAccount
+    ? ['login']
+    : (await pendingPurpose(app, phone)) === 'delete_account'
+      ? ['delete_account', 'login']
+      : ['login', 'delete_account'];
+  const purpose = await consumeOtp(app, phone, code, purposes);
   // Spent either way (the dev code 123456 skips the row); DELETE /me asks for a fresh one.
   if (purpose === 'delete_account')
     await db.delete(otpCodes).where(and(eq(otpCodes.phone, phone), eq(otpCodes.purpose, purpose)));
 
   let [p] = await db.select().from(professionals).where(eq(professionals.phone, phone));
+  // A team invite becomes active when its person first proves the number (M11).
+  if (p && !p.joinedAt && purpose === 'login')
+    [p] = await db
+      .update(professionals)
+      .set({ joinedAt: app.now() })
+      .where(eq(professionals.id, p!.id))
+      .returning();
   const isNewUser = !p;
   if (!p) {
     if (!opts.createAccount || purpose === 'delete_account') throw accountNotFound();
@@ -61,5 +73,9 @@ export async function verifyLogin(
       return created;
     });
   }
-  return { scope: { professionalId: p.id, salonId: p.salonId, role: p.role }, isNewUser };
+  return {
+    scope: { professionalId: p!.id, salonId: p!.salonId, role: p!.role },
+    isNewUser,
+    purpose,
+  };
 }

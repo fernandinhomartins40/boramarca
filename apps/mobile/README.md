@@ -225,21 +225,19 @@ Testes, tipos e lint: `pnpm --filter @boramarca/mobile test | typecheck | lint`.
 
 Mesmo com `nodeLinker: hoisted`, a compilação C++ (codegen do gesture-handler) gera arquivos `.o`
 com mais de 300 caracteres e o `ninja` 1.10 do CMake 3.22.1 (padrão do Android Gradle Plugin)
-falha com "Filename longer than 260 characters". **Contorno usado:** ninja 1.12 (que respeita
-caminhos longos) via CMake 4.1.2 do SDK.
+falha com "Filename longer than 260 characters". **Contorno:** ninja 1.12 (que respeita caminhos
+longos) via CMake 4.1+ do SDK, escolhido **automaticamente** pelo config plugin
+`plugins/withWindowsCmake.cjs` a cada `expo prebuild` (inclusive `--clean`).
 
 1. Windows com caminhos longos ligados (`LongPathsEnabled = 1` em
    `HKLM\SYSTEM\CurrentControlSet\Control\FileSystem`; já está nesta máquina).
-2. Instale o CMake 4.1.2 pelo SDK Manager (Android Studio → SDK Tools → CMake).
-3. Depois de cada `expo prebuild --clean`, crie `android/local.properties`:
+2. CMake 4.1 ou mais novo instalado pelo SDK Manager (Android Studio → SDK Tools → CMake; nesta
+   máquina, 4.1.2).
+3. Nada a fazer depois do prebuild: o plugin grava `sdk.dir` e `cmake.dir` (o CMake ≥ 4.1 mais novo
+   em `<sdk>/cmake`) em `android/local.properties`. Sem o CMake 4.1+, ele avisa no prebuild
+   (`[withWindowsCmake] CMake >= 4.1 not found`) e o build falha como antes.
 
-   ```properties
-   sdk.dir=C\:\\Users\\<você>\\AppData\\Local\\Android\\Sdk
-   cmake.dir=C\:\\Users\\<você>\\AppData\\Local\\Android\\Sdk\\cmake\\4.1.2
-   ```
-
-`android/` é gerada e fora do git, por isso o passo 3 é manual (D2/E1 podem levá-lo para um config
-plugin). Builds no EAS (Linux) não têm esse limite.
+Fora do Windows (EAS em Linux, macOS) o plugin não faz nada; lá esse limite não existe.
 
 ## Ícone e tela de abertura
 
@@ -255,7 +253,9 @@ plugin). Builds no EAS (Linux) não têm esse limite.
 **O que é nativo.** `src/features/balcao/native/` (importado por `app/_layout.tsx`) liga os motores
 reais com `setBalcaoEngines`: palavra de ativação Porcupine (`wakeWord.ts`), reconhecimento de fala
 pt-BR do sistema via `expo-speech-recognition` (`speechToText.ts`), fala `expo-speech` (já existia) e
-volume de mídia (Android). Sem `EXPO_PUBLIC_PICOVOICE_ACCESS_KEY` ou sem os arquivos de
+volume de mídia (Android). Sem `EXPO_PUBLIC_PICOVOICE_ACCESS_KEY` (este é o nome lido pelo código em
+`src/features/balcao/native/index.ts` e usado no `.env.example`; o plano, seção 11, chama de
+`EXPO_PUBLIC_PICOVOICE_KEY`, nome antigo que não funciona) ou sem os arquivos de
 `assets/wakeword/` (gerados no console da Picovoice, ver `docs/pendencias/D2.md`), a palavra de
 ativação continua simulada e a tela mostra **Falar**. Se o Porcupine falhar ao iniciar, ele também
 cai para o botão.
@@ -276,10 +276,8 @@ sozinho (proibido para `microphone` a partir do boot).
 reconhecimento de fala em pt-BR no `app.config.ts` (plugins `expo-audio` e
 `expo-speech-recognition`).
 
-**Outros plugins.** `plugins/withWindowsCmake.cjs` grava `sdk.dir` e `cmake.dir` (o CMake ≥ 4.1 mais
-novo em `<sdk>/cmake`) em `android/local.properties` a cada prebuild no Windows: o passo 3 de
-"Windows e o limite de 260 caracteres" agora é automático, mas **continua dependendo do CMake 4.1+
-instalado pelo SDK Manager** (sem ele o plugin avisa e o build falha como antes). `plugins/withWakeWord.cjs`
+**Outros plugins.** `plugins/withWindowsCmake.cjs`: ver "Windows e o limite de 260 caracteres".
+`plugins/withWakeWord.cjs`
 copia os arquivos `.ppn`/`.pv` para o Android (`assets`) e o iOS (recursos do bundle).
 
 ### Roteiro de teste manual — Android físico
@@ -313,3 +311,53 @@ da palavra (para testar a palavra real), caixa Bluetooth pareada, celular no car
    respondida por voz.
 3. Bloquear a tela: o Balcão para de ouvir (esperado). A decisão chega por notificação com Sim/Não.
 4. Abrir o WhatsApp no pareamento (`LSApplicationQueriesSchemes`).
+
+## Perfis de build, lojas e verificação local (E1)
+
+**`eas.json`** (versão do app no EAS: `appVersionSource: remote`; `production` com
+`autoIncrement`):
+
+| Perfil | Saída | `EXPO_PUBLIC_DATA_SOURCE` | `EXPO_PUBLIC_API_URL` | Menu dev |
+|---|---|---|---|---|
+| `development` | dev client, APK / iPhone interno | `mock` | `http://10.0.2.2:3333` | sim (`__DEV__`) |
+| `preview` | APK / iPhone interno (ad hoc) | `api` | `https://api-homolog.boramarca.com.br` | não |
+| `production` | AAB / IPA para as lojas | `api` | `https://api.boramarca.com.br` | não |
+
+`EXPO_PUBLIC_SITE_URL` = `https://boramarca.com.br` nos três. Nunca defina `EXPO_PUBLIC_DEV_TOOLS`
+em `preview` ou `production`. `extra.eas.projectId` só existe depois do `eas init` (constante
+`EAS_PROJECT_ID` no `app.config.ts`; `docs/pendencias/E1.md`).
+
+**Configuração nativa para as lojas** (`app.config.ts`):
+
+- Android: `blockedPermissions` tira o que vem do modelo e das bibliotecas sem uso
+  (`SYSTEM_ALERT_WINDOW` só fica no manifesto de debug, para o dev client; biometria do
+  expo-secure-store; selos de ícone; `RECEIVE_BOOT_COMPLETED`; install referrer). A lista final do
+  release está em `store/declaracoes-android.md`. `usesCleartextTraffic` só entra quando
+  `EXPO_PUBLIC_API_URL` começa com `http://` (API local); os perfis de loja usam https.
+- iOS: textos de permissão em pt-BR, `privacyManifests` (gera o `PrivacyInfo.xcprivacy`), ATS só
+  https (com rede local liberada para desenvolvimento), `ITSAppUsesNonExemptEncryption: false`, sem
+  `NSFaceIDUsageDescription` e sem `UIBackgroundModes: fetch` (o expo-task-manager acrescenta; o app
+  não usa busca em segundo plano). `aps-environment` = `production` quando `EAS_BUILD_PROFILE` é
+  `production`.
+- O Modo Balcão (`app/balcao/index.tsx`) abre o assistente `/balcao/configurar` enquanto o microfone
+  não foi permitido: a permissão só é pedida depois da explicação, e o Android 14+ recusaria o
+  serviço `microphone` sem ela.
+
+**Material das lojas:** `store/` (textos, segurança de dados, privacidade da Apple, declarações do
+Android, notas para a revisão, capturas e `PUBLICAR.md` com o passo a passo).
+
+**Build de release local** (prova que o build otimizado compila; a chave de teste fica fora do git):
+
+```sh
+keytool -genkeypair -keystore <fora-do-repo>/teste.jks -alias teste -keyalg RSA -keysize 2048 -validity 30
+EXPO_PUBLIC_DATA_SOURCE=api EXPO_PUBLIC_API_URL=http://10.0.2.2:3333 npx expo prebuild --platform android
+cd android && EXPO_PUBLIC_DATA_SOURCE=api EXPO_PUBLIC_API_URL=http://10.0.2.2:3333 \
+  gradlew.bat assembleRelease -PreactNativeArchitectures=x86_64 \
+  -Pandroid.injected.signing.store.file=<fora-do-repo>/teste.jks \
+  -Pandroid.injected.signing.store.password=<senha> -Pandroid.injected.signing.key.alias=teste \
+  -Pandroid.injected.signing.key.password=<senha>
+```
+
+`-PreactNativeArchitectures=x86_64` compila só para o emulador (bem mais rápido nesta máquina); o
+EAS compila todas as arquiteturas. Para a conta de revisão local: em `apps/api`,
+`REVIEW_PHONE=+5511999990000 REVIEW_OTP=246810 pnpm start` (número fictício, nunca de conta real).

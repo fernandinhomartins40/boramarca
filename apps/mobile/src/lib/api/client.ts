@@ -46,6 +46,7 @@ export interface ApiClient {
   /** Single-flight refresh. Resolves with the new access token, or null when the session is over. */
   refresh(): Promise<string | null>;
   accessToken(): string | null;
+  refreshToken(): string | null;
   baseUrl: string;
 }
 
@@ -185,6 +186,7 @@ export function createApiClient(opts: ApiClientOptions): ApiClient {
     call,
     refresh,
     accessToken: () => opts.tokens.get()?.accessToken ?? null,
+    refreshToken: () => opts.tokens.get()?.refreshToken ?? null,
     baseUrl: opts.baseUrl,
   };
 }

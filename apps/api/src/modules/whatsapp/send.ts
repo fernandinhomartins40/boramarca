@@ -52,9 +52,17 @@ export interface EnqueueInput {
 const HOLD_MS = 15_000;
 const RETRY_MS = 10_000;
 
-/** Past attended appointment: the guard lets these clients receive messages. */
+/**
+ * A visit that really happened: the guard lets these clients receive messages. Only an attended
+ * appointment that started in the past and was booked before it started (M8: "marcar e concluir"
+ * on any number, or a back-dated record, does not turn a stranger into a client).
+ */
 export const hadPastAppointment = (clientId: string, now: Date) =>
-  sql<boolean>`exists(select 1 from ${appointments} a where a.client_id = ${clientId} and (a.status = 'done' or (a.status in ('confirmed','in_service') and a.starts_at < ${now.toISOString()}::timestamptz)))`;
+  sql<boolean>`exists(select 1 from ${appointments} a where a.client_id = ${clientId} and a.status in ('done','in_service') and a.starts_at < ${now.toISOString()}::timestamptz and a.created_at < a.starts_at)`;
+
+/** The client wrote to this professional at least once. */
+export const hadInboundMessage = (clientId: string) =>
+  sql<boolean>`exists(select 1 from ${messages} m join ${conversations} cv on cv.id = m.conversation_id where cv.client_id = ${clientId} and m.direction = 'in')`;
 
 export function createOutbox(core: Core) {
   const { db, queues, gateway, now } = core;
@@ -83,7 +91,7 @@ export function createOutbox(core: Core) {
     const t = now();
     const [facts] = await db
       .select({
-        inbound: sql<boolean>`exists(select 1 from ${messages} m join ${conversations} cv on cv.id = m.conversation_id where cv.client_id = ${c.id} and m.direction = 'in')`,
+        inbound: hadInboundMessage(c.id),
         past: hadPastAppointment(c.id, t),
         optedIn: max(waitlistEntries.optedInAt),
       })
@@ -251,7 +259,12 @@ export function createOutbox(core: Core) {
               .expire(counterKey(i, t, 'd'), 90_000)
               .exec();
           },
-          audit: (e) => audit(db, data.professionalId, 'system', e.action, e.payload),
+          // The phone stays out of audit_log (B5): the message id leads to the client.
+          audit: ({ action, payload: { toPhone: _phone, ...rest } }) =>
+            audit(db, data.professionalId, 'system', action, {
+              ...rest,
+              messageId: data.messageId,
+            }),
         },
       });
       // decideOutbox said 'drop' -> the guard blocks it as stale_message (and audits it).

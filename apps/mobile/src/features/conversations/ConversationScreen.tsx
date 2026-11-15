@@ -153,7 +153,9 @@ export function ConversationScreen({ id }: { id: string }) {
               backgroundColor: t.colors.surfaceAlt,
             }}
           >
-            <Text style={{ flex: 1 }}>IA respondendo</Text>
+            <Text style={{ flex: 1 }} numberOfLines={1} adjustsFontSizeToFit>
+              IA respondendo
+            </Text>
             <Switch
               value={aiOn}
               tone="accent"

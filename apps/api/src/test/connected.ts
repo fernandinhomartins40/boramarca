@@ -2,7 +2,7 @@ import { expect } from 'vitest';
 import { WHATSAPP_WEBHOOK_SECRET_HEADER } from '@boramarca/shared';
 import type { FakeGateway } from '@boramarca/whatsapp';
 import type { buildApp } from '../app';
-import { clients } from '../db/schema';
+import { clients, conversations, messages } from '../db/schema';
 import { randomPhone, seedProfessional } from './helpers';
 
 export const WEBHOOK_SECRET = 'test-webhook-secret-0123456789';
@@ -60,5 +60,25 @@ export async function connectedPro(
       .returning();
     return c!;
   };
-  return { ...pro, token, call, instance, receive, sentTo, addClient };
+  /** The client already wrote once (stored directly, no AI turn): may join the waitlist by hand. */
+  const wrote = async (clientId: string) => {
+    const [conv] = await app.db
+      .insert(conversations)
+      .values({ professionalId: pro.professionalId, clientId })
+      .onConflictDoUpdate({
+        target: [conversations.professionalId, conversations.clientId],
+        set: { updatedAt: new Date() },
+      })
+      .returning();
+    await app.db
+      .insert(messages)
+      .values({
+        conversationId: conv!.id,
+        direction: 'in',
+        author: 'client',
+        kind: 'text',
+        text: 'oi',
+      });
+  };
+  return { ...pro, token, call, instance, receive, sentTo, addClient, wrote };
 }

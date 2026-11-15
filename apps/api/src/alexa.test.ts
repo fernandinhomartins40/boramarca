@@ -7,7 +7,7 @@ import { eq } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { createRequestVerifier } from '@boramarca/alexa';
 import { buildApp } from './app';
-import { alexaSettings, professionals } from './db/schema';
+import { alexaSettings, alexaTokens, professionals } from './db/schema';
 import { loadPro } from './lib/core';
 import { captureSender, randomPhone, seedProfessional, testConfig } from './test/helpers';
 import { waitFor } from './test/connected';
@@ -242,6 +242,48 @@ describe('account linking → skill', () => {
       headers: { authorization: `Bearer ${token(pro)}` },
     });
     expect(settings.json().linked).toBe(true);
+  });
+
+  it('M4: refresh rotates, a new link ends the old one, idle links expire, DELETE /alexa/link unlinks', async () => {
+    const pro = await seedProfessional(app.db);
+    const first = await link(pro.phone);
+    const t1 = (await first.exchange(first.verifier)).json();
+    const refresh = (rt: string) =>
+      form(
+        '/v1/alexa/oauth/token',
+        { grant_type: 'refresh_token', refresh_token: rt },
+        { authorization: basic },
+      );
+    const r1 = (await refresh(t1.refresh_token)).json();
+    expect(r1.refresh_token).not.toBe(t1.refresh_token);
+    // The refresh token used is spent.
+    expect((await refresh(t1.refresh_token)).json().error).toBe('invalid_grant');
+
+    // Linking again (another Echo, or after disabling the skill) ends the previous link.
+    const second = await link(pro.phone);
+    const t2 = (await second.exchange(second.verifier)).json();
+    expect((await refresh(r1.refresh_token)).json().error).toBe('invalid_grant');
+    expect(speechOf((await skill(signed('clientes-restantes', r1.access_token))).json())).toContain(
+      'vincule',
+    );
+
+    // Unused for longer than the idle window: the link ends.
+    await app.db
+      .update(alexaTokens)
+      .set({ refreshExpiresAt: new Date(Date.now() - 1000) })
+      .where(eq(alexaTokens.professionalId, pro.professionalId));
+    expect((await refresh(t2.refresh_token)).json().error).toBe('invalid_grant');
+
+    const third = await link(pro.phone);
+    const t3 = (await third.exchange(third.verifier)).json();
+    const auth = { authorization: `Bearer ${token(pro)}` };
+    const off = await app.inject({ method: 'DELETE', url: '/v1/alexa/link', headers: auth });
+    expect(off.statusCode, off.body).toBe(200);
+    expect(off.json().linked).toBe(false);
+    expect((await refresh(t3.refresh_token)).json().error).toBe('invalid_grant');
+    expect(speechOf((await skill(signed('clientes-restantes', t3.access_token))).json())).toContain(
+      'vincule',
+    );
   });
 
   it('token endpoint: wrong client secret is 401 invalid_client', async () => {

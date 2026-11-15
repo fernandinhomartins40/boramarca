@@ -29,10 +29,14 @@ export function createApiData(api: ApiClient): DataLayer {
     auth: {
       requestOtp: (body) => api.call(r.auth.otpRequest, { body }),
       verifyOtp: (body) => api.call(r.auth.otpVerify, { body }),
-      // The API has no logout route (stateless JWT): stop the pushes to this phone, then the
-      // caller (features/auth signOut) forgets the tokens.
+      // Stop the pushes to this phone, then end the session on the server (POST /auth/logout
+      // revokes this refresh token and its rotations). Both tolerate failure: the caller
+      // (features/auth signOut) forgets the tokens anyway.
       async signOut() {
         if (deviceId) await devices.remove(deviceId).catch(() => undefined);
+        const refreshToken = api.refreshToken();
+        if (refreshToken)
+          await api.call(r.auth.logout, { body: { refreshToken } }).catch(() => undefined);
       },
     },
     profile: {

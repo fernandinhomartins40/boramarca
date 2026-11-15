@@ -104,6 +104,24 @@ export function createToolRunner(
     return a!; // ownership already checked
   }
 
+  /** Does any action of a perguntar_ao_profissional touch a client other than this one? */
+  async function touchesOtherClient(
+    professionalId: string,
+    clientId: string,
+    a: Extract<AiToolCall, { name: 'perguntar_ao_profissional' }>['arguments'],
+  ) {
+    for (const act of [a.proposedAction, ...a.options.map((o) => o.action)]) {
+      if (!act) continue;
+      if (act.name === 'enviar_whatsapp' && act.arguments.clientId !== clientId) return true;
+      if (act.name === 'remarcar' || act.name === 'cancelar' || act.name === 'confirmar_presenca')
+        if (
+          (await appointmentInfo(professionalId, act.arguments.appointmentId)).clientId !== clientId
+        )
+          return true;
+    }
+    return false;
+  }
+
   async function run(input: TurnInput) {
     const { pro, client } = input;
     const pid = pro.p.id;
@@ -260,7 +278,19 @@ export function createToolRunner(
           await execute(call);
           break;
         case 'perguntar_ao_profissional': {
-          const a = call.arguments;
+          let a = call.arguments;
+          // The question and labels are the model's words: an option must not act on someone
+          // else (a crafted "Bia confirma?" whose "Sim" cancels Carla). Those go through `ask` (M7).
+          if (await touchesOtherClient(pid, client.id, a)) {
+            await audit(db, pid, 'ai', 'ai.tool_rejected', {
+              reason: 'other_client',
+              tools: [call.name],
+              messageId: input.messageId,
+            });
+            const fb = askProfessionalFallback(first, 'pedido sobre outro cliente').calls[0]!;
+            if (fb.name !== 'perguntar_ao_profissional') break;
+            a = fb.arguments;
+          }
           await deps.decisions.create({
             pro,
             conversationId: input.conversationId,

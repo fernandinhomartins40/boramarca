@@ -3,7 +3,11 @@
 import { Writable } from 'node:stream';
 import pino from 'pino';
 import { expect, it } from 'vitest';
+import { eq } from 'drizzle-orm';
+import { createDb } from './db/client';
+import { professionals } from './db/schema';
 import { loggerOptions } from './lib/logger';
+import { TEST_DATABASE_URL } from './test/env';
 
 it('censors phones, texts, codes and tokens, at the top level and one level down', () => {
   const lines: string[] = [];
@@ -49,4 +53,33 @@ it('censors phones, texts, codes and tokens, at the top level and one level down
   expect(all).toContain('keep-me');
   expect(all).toContain('/v1/whatsapp/pairing-code');
   expect(all).toContain('[redacted]');
+});
+
+it('a failed query logs the SQL, the code and the stack, never the bound values (M9)', async () => {
+  const { db, sql } = createDb(TEST_DATABASE_URL);
+  const lines: string[] = [];
+  const out = new Writable({
+    write(chunk, _enc, cb) {
+      lines.push(String(chunk));
+      cb();
+    },
+  });
+  const log = pino(loggerOptions('info'), out);
+  // Not a uuid: Postgres repeats the value in its message, drizzle in `params` and its message.
+  const err = await db
+    .select()
+    .from(professionals)
+    .where(eq(professionals.id, '+5511987650000'))
+    .then(
+      () => null,
+      (e: unknown) => e,
+    );
+  await sql.end();
+  expect(err).toBeTruthy();
+  log.error({ err }, 'unhandled error');
+  const all = lines.join('\n');
+  expect(all).not.toContain('987650000');
+  expect(all).toContain('select');
+  expect(all).toContain('22P02'); // invalid_text_representation
+  expect(all).toContain('"stack"'); // stack frames kept
 });

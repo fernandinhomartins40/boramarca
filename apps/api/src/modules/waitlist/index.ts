@@ -4,6 +4,7 @@ import { routes, type WaitlistEntryView } from '@boramarca/shared';
 import { clients, professionals, services, waitlistEntries, waitlistOffers } from '../../db/schema';
 import { audit } from '../../lib/audit';
 import { loadPro } from '../../lib/core';
+import { hadInboundMessage, hadPastAppointment } from '../whatsapp/send';
 import { AppError, notFound } from '../../lib/errors';
 import { route } from '../../lib/route';
 import { wire } from '../../lib/serialize';
@@ -95,6 +96,21 @@ const waitlist: FastifyPluginAsync = async (app) => {
     const { clientId, serviceId, preference } = req.body;
     await checkRefs(pid, clientId, serviceId);
     // clientAsked: true is required by the contract ("Só adicione quem pediu para ser avisado").
+    // Being on the list lets the guard message this number, so a manual add needs someone who
+    // already wrote or was really attended (M8, plan section 7): never a cold contact.
+    const [known] = await db
+      .select({
+        wrote: hadInboundMessage(clientId),
+        visited: hadPastAppointment(clientId, app.now()),
+      })
+      .from(clients)
+      .where(eq(clients.id, clientId));
+    if (!known?.wrote && !known?.visited)
+      throw new AppError(
+        409,
+        'CLIENT_NEVER_WROTE',
+        'Essa pessoa ainda não falou com você pelo WhatsApp. Peça para ela mandar uma mensagem antes.',
+      );
     const [e] = await db
       .insert(waitlistEntries)
       .values({ professionalId: pid, clientId, serviceId, preference, optedInAt: app.now() })

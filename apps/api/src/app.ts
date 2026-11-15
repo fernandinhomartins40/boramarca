@@ -7,7 +7,7 @@ import rateLimit from '@fastify/rate-limit';
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
 import websocket from '@fastify/websocket';
-import Fastify from 'fastify';
+import Fastify, { type FastifyInstance } from 'fastify';
 import {
   jsonSchemaTransform,
   serializerCompiler,
@@ -41,6 +41,21 @@ declare module 'fastify' {
   interface FastifyInstance {
     alexaOverrides: Pick<AppOverrides, 'alexaVerifier' | 'voiceMonkeyFetch' | 'alexaTimeoutMs'>;
   }
+}
+
+/** Swagger UI at /v1/docs and the spec at /v1/openapi.json (generated from @boramarca/shared). */
+async function registerDocs(app: FastifyInstance) {
+  await app.register(swagger, {
+    openapi: {
+      info: { title: 'Bora Marca API', version: process.env.npm_package_version ?? '0.0.0' },
+      components: {
+        securitySchemes: { bearerAuth: { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' } },
+      },
+    },
+    transform: jsonSchemaTransform,
+  });
+  await app.register(swaggerUi, { routePrefix: `${API_PREFIX}/docs` });
+  app.get(`${API_PREFIX}/openapi.json`, { schema: { hide: true } }, async () => app.swagger());
 }
 
 /** `overrides` lets tests swap the OTP sender, WhatsApp gateway, LLM, push and clock. */
@@ -83,17 +98,8 @@ export async function buildApp(config: Config, overrides: AppOverrides = {}) {
     alexaTimeoutMs: overrides.alexaTimeoutMs,
   });
   await app.register(websocket);
-  await app.register(swagger, {
-    openapi: {
-      info: { title: 'Bora Marca API', version: process.env.npm_package_version ?? '0.0.0' },
-      components: {
-        securitySchemes: { bearerAuth: { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' } },
-      },
-    },
-    transform: jsonSchemaTransform,
-  });
-  await app.register(swaggerUi, { routePrefix: `${API_PREFIX}/docs` });
-  app.get(`${API_PREFIX}/openapi.json`, { schema: { hide: true } }, async () => app.swagger());
+  // B7: the API description is for development; production does not publish it.
+  if (config.NODE_ENV !== 'production') await registerDocs(app);
 
   // Unversioned liveness probe for Docker/Caddy.
   app.get('/health', async () => healthPayload());

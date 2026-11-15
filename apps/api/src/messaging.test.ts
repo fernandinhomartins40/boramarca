@@ -469,10 +469,9 @@ describe('protections', () => {
             )
         )[0],
     );
-    expect(blocked.payload).toMatchObject({
-      reason: 'recipient_not_allowed',
-      toPhone: other.phone,
-    });
+    expect(blocked.payload).toMatchObject({ reason: 'recipient_not_allowed' });
+    expect(blocked.payload.messageId).toEqual(expect.any(String));
+    expect(JSON.stringify(blocked.payload)).not.toContain(other.phone); // B5
     expect(t.sentTo(other.phone)).toHaveLength(0);
   });
 

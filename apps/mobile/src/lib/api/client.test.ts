@@ -181,12 +181,41 @@ describe('api client', () => {
     const data = createApiData(
       createApiClient({ baseUrl: BASE, tokens: memoryStore(tokens('t')), fetch: server.fetch }),
     );
-    await data.auth.signOut(); // nothing registered: no call
+    await data.auth.signOut(); // nothing registered: only the logout
     await data.devices.register({ pushToken: device.pushToken, platform: 'android' });
     await data.auth.signOut();
     expect(server.calls.map((c) => `${c.method} ${c.url}`)).toEqual([
+      `POST ${BASE}/v1/auth/logout`,
       `POST ${BASE}/v1/devices`,
       `DELETE ${BASE}/v1/devices/${device.id}`,
+      `POST ${BASE}/v1/auth/logout`,
     ]);
+    expect(JSON.parse(server.calls[0]!.body!)).toEqual({ refreshToken: 'refresh-t' });
+  });
+
+  it('signs out even when the logout call fails', async () => {
+    const server = fakeServer(() => 'offline');
+    const data = createApiData(
+      createApiClient({ baseUrl: BASE, tokens: memoryStore(tokens('t')), fetch: server.fetch }),
+    );
+    await expect(data.auth.signOut()).resolves.toBeUndefined();
+  });
+
+  it('shows a clear message for the 409s the app can hit', () => {
+    const e = new DataError({ statusCode: 409, code: 'NOT_STARTED', message: 'x' });
+    expect(e.message).toMatch(/ainda não começou/);
+    expect(new DataError({ statusCode: 409, code: 'OTHER', message: 'y' }).message).toBe('y');
+  });
+
+  it('keeps the rotated refresh token returned by /auth/refresh', async () => {
+    const server = fakeServer((c) => {
+      if (c.url.endsWith('/v1/auth/refresh')) return [200, tokens('new')];
+      return c.headers.Authorization === 'Bearer new' ? [200, { items: [] }] : [401, {}];
+    });
+    const store = memoryStore(tokens('old'));
+    const api = createApiClient({ baseUrl: BASE, tokens: store, fetch: server.fetch });
+    await api.call(routes.decisions.list);
+    expect(store.current?.refreshToken).toBe('refresh-new');
+    expect(api.refreshToken()).toBe('refresh-new');
   });
 });

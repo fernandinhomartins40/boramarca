@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { buildContext, maskPii } from './context';
 import { FakeLlm, toolReply } from './fake-llm';
 import { interpretClientMessage } from './interpret-client';
-import { makeInput, NOW } from './fixtures';
+import { at, IDS, makeInput, NOW } from './fixtures';
 
 const PHONE_PATTERNS = [/\+?55\s?\(?\d{2}\)?\s?9?\d{4}-?\d{4}/, /\d{8,}/, /\d{4,5}[-\s]\d{4}/];
 
@@ -65,5 +65,35 @@ describe('buildContext', () => {
       }),
     );
     expect(ctx.messages.at(-1)?.content).toBe('(áudio transcrito) tem horário amanhã?');
+  });
+
+  it('other clients of the day go out only as busy times; this client keeps the details', () => {
+    const input = makeInput('qual o endereço?', { professions: ['psicologo'] });
+    input.day.appointments[0]!.serviceNames = ['Sessão de psicoterapia'];
+    input.day.appointments.push({
+      id: IDS.apptFulano,
+      clientId: IDS.fulano,
+      clientName: 'Fulano de Tal',
+      startsAt: at('16:00'),
+      endsAt: at('16:50'),
+      serviceNames: ['Avaliação'],
+      status: 'scheduled',
+    });
+    const sent = buildContext(input)
+      .messages.map((m) => String(m.content))
+      .join(' ');
+    for (const leak of [
+      'Ana',
+      'Carlos',
+      'psicoterapia',
+      IDS.ana,
+      IDS.carlos,
+      IDS.apptAna,
+      IDS.apptCarlos,
+    ])
+      expect(sent).not.toContain(leak);
+    expect(sent).toContain('13h–13h30 | ocupado');
+    expect(sent).toContain('15h–15h30 | ocupado');
+    expect(sent).toContain(`Avaliação | scheduled | appointmentId ${IDS.apptFulano}`);
   });
 });

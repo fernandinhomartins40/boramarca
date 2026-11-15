@@ -149,6 +149,7 @@ describe('automatic waitlist', () => {
     const fabi = await t.addClient('Fabi Tarde');
     const dani = await t.addClient('Dani Fora');
     const add = async (clientId: string, periods: string[]) => {
+      await t.wrote(clientId); // a manual add needs someone who already wrote (M8)
       const r = await t.call('POST', '/v1/waitlist', {
         clientId,
         serviceId: null,
@@ -255,6 +256,7 @@ describe('automatic waitlist', () => {
     const ctx = { professionalId: t.professionalId, actor: 'professional' as const };
     const c = await t.addClient('Gabi');
     const other = await t.addClient('Hugo');
+    await t.wrote(c.id);
     const entry = (
       await t.call('POST', '/v1/waitlist', {
         clientId: c.id,

@@ -203,6 +203,17 @@ export const routes = {
       body: RefreshBody,
       response: RefreshResponse,
     }),
+    /**
+     * Ends this session on the server: the refresh token (and every token rotated from it) stops
+     * working. Always `ok`, even for an unknown or expired token.
+     */
+    logout: r({
+      method: 'POST',
+      path: '/auth/logout',
+      auth: 'public',
+      body: RefreshBody,
+      response: OkResponse,
+    }),
     me: r({ method: 'GET', path: '/me', auth: 'jwt', response: MeResponse }),
     updateMe: r({
       method: 'PATCH',
@@ -650,6 +661,13 @@ export const routes = {
       path: '/alexa/settings',
       auth: 'jwt',
       body: AlexaSettingsPatch,
+      response: AlexaSettingsResponse,
+    }),
+    /** Unlinks the Alexa account: every Alexa token of this professional stops working. */
+    unlink: r({
+      method: 'DELETE',
+      path: '/alexa/link',
+      auth: 'jwt',
       response: AlexaSettingsResponse,
     }),
   },

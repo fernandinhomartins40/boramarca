@@ -7,6 +7,8 @@ import type { Db } from '../../db/client';
 import { alexaOauthCodes, alexaTokens } from '../../db/schema';
 
 export const ALEXA_CODE_TTL_MS = 5 * 60_000;
+/** A link unused this long ends (Alexa refreshes about every hour while the skill is used). */
+export const ALEXA_REFRESH_IDLE_MS = 90 * 24 * 60 * 60_000;
 const sha = (s: string) => createHash('sha256').update(s).digest('hex');
 const secret = (prefix: string) => `${prefix}_${randomBytes(32).toString('base64url')}`;
 
@@ -43,14 +45,19 @@ export function createAlexaStore(db: Db, now: () => Date) {
       return this.issueTokens(row.professionalId);
     },
 
+    /** A new link replaces the previous one: its tokens stop working (M4). */
     async issueTokens(professionalId: string): Promise<AlexaOAuthTokenResponse> {
       const access = secret('bma');
       const refresh = secret('bmr');
-      await db.insert(alexaTokens).values({
-        professionalId,
-        accessTokenHash: sha(access),
-        accessExpiresAt: expiresIn(ALEXA_ACCESS_TOKEN_TTL_S * 1000),
-        refreshTokenHash: sha(refresh),
+      await db.transaction(async (tx) => {
+        await tx.delete(alexaTokens).where(eq(alexaTokens.professionalId, professionalId));
+        await tx.insert(alexaTokens).values({
+          professionalId,
+          accessTokenHash: sha(access),
+          accessExpiresAt: expiresIn(ALEXA_ACCESS_TOKEN_TTL_S * 1000),
+          refreshTokenHash: sha(refresh),
+          refreshExpiresAt: expiresIn(ALEXA_REFRESH_IDLE_MS),
+        });
       });
       return {
         access_token: access,
@@ -60,24 +67,40 @@ export function createAlexaStore(db: Db, now: () => Date) {
       };
     },
 
-    /** New access token, same refresh token. null (unknown/unlinked) → `invalid_grant`. */
+    /**
+     * Rotation: new access and refresh tokens; the refresh token used stops working. null
+     * (unknown, already used, idle past ALEXA_REFRESH_IDLE_MS, unlinked) → `invalid_grant`.
+     */
     async refresh(refreshToken: string): Promise<AlexaOAuthTokenResponse | null> {
       const access = secret('bma');
+      const refresh = secret('bmr');
       const [row] = await db
         .update(alexaTokens)
         .set({
           accessTokenHash: sha(access),
           accessExpiresAt: expiresIn(ALEXA_ACCESS_TOKEN_TTL_S * 1000),
+          refreshTokenHash: sha(refresh),
+          refreshExpiresAt: expiresIn(ALEXA_REFRESH_IDLE_MS),
         })
-        .where(eq(alexaTokens.refreshTokenHash, sha(refreshToken)))
+        .where(
+          and(
+            eq(alexaTokens.refreshTokenHash, sha(refreshToken)),
+            gt(alexaTokens.refreshExpiresAt, now()),
+          ),
+        )
         .returning();
       if (!row) return null;
       return {
         access_token: access,
         token_type: 'Bearer',
         expires_in: ALEXA_ACCESS_TOKEN_TTL_S,
-        refresh_token: refreshToken,
+        refresh_token: refresh,
       };
+    },
+
+    /** Unlink: every token of this professional stops working. */
+    async unlink(professionalId: string) {
+      await db.delete(alexaTokens).where(eq(alexaTokens.professionalId, professionalId));
     },
 
     async professionalIdFromToken(accessToken: string): Promise<string | null> {

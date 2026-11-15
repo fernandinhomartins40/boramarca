@@ -1,7 +1,8 @@
-import { eq } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 import type { FastifyInstance, FastifyPluginAsync } from 'fastify';
 import { routes, type MeResponse } from '@boramarca/shared';
-import { professionals, salons } from '../../db/schema';
+import { professionals, refreshFamilies, salons } from '../../db/schema';
+import { audit } from '../../lib/audit';
 import { AppError, notFound } from '../../lib/errors';
 import { route } from '../../lib/route';
 import { wire } from '../../lib/serialize';
@@ -20,7 +21,10 @@ export async function loadMe(app: FastifyInstance, professionalId: string): Prom
   return { professional: wire(row.p), salon: wire(row.s) };
 }
 
-/** POST /auth/otp/{request,verify}, POST /auth/refresh, GET/PATCH/DELETE /me. */
+/** A refresh token reused this soon after its rotation is a race, not theft: no revocation. */
+const REFRESH_RACE_MS = 30_000;
+
+/** POST /auth/otp/{request,verify}, POST /auth/{refresh,logout}, GET/PATCH/DELETE /me. */
 const auth: FastifyPluginAsync = async (app) => {
   const a = routes.auth;
 
@@ -42,23 +46,93 @@ const auth: FastifyPluginAsync = async (app) => {
     app,
     a.otpVerify,
     async (req) => {
-      const { scope, isNewUser } = await verifyLogin(app, req.body.phone, req.body.code, {
+      const { scope, isNewUser, purpose } = await verifyLogin(app, req.body.phone, req.body.code, {
         createAccount: true,
       });
-      return { ...app.issueTokens(scope), isNewUser };
+      return {
+        ...app.issueTokens(scope, purpose === 'delete_account' ? { scp: 'delete_account' } : {}),
+        isNewUser,
+      };
     },
     otpLimit,
   );
 
+  const expired = () => new AppError(401, 'UNAUTHORIZED', 'Sessão expirada. Entre de novo.');
+  /** Ends a login session: every refresh token of the family stops working. */
+  const revoke = async (fam: string, professionalId: string, exp: Date) => {
+    await app.db
+      .insert(refreshFamilies)
+      .values({ id: fam, professionalId, gen: -1, revokedAt: new Date(), expiresAt: exp })
+      .onConflictDoUpdate({ target: refreshFamilies.id, set: { revokedAt: new Date() } });
+  };
+
+  // Rotation (M3): each refresh token works once. Reusing an older one (stolen copy, or the
+  // thief already used it) ends the whole session, for both holders.
   route(app, a.refresh, async (req) => {
-    const s = app.verifyRefresh(req.body.refreshToken);
+    const t = app.verifyRefresh(req.body.refreshToken);
     // Re-read role/salon: they may have changed, and a deleted account must not refresh.
     const [p] = await app.db
       .select()
       .from(professionals)
-      .where(eq(professionals.id, s.professionalId));
-    if (!p) throw new AppError(401, 'UNAUTHORIZED', 'Sessão expirada. Entre de novo.');
-    return app.issueTokens({ professionalId: p.id, salonId: p.salonId, role: p.role });
+      .where(eq(professionals.id, t.professionalId));
+    if (!p) throw expired();
+    const next = app.issueTokens(
+      { professionalId: p.id, salonId: p.salonId, role: p.role },
+      { fam: t.fam, gen: t.gen + 1 },
+    );
+    const expiresAt = new Date(next.refreshTokenExpiresAt);
+    const [ok] =
+      t.gen === 0
+        ? await app.db
+            .insert(refreshFamilies)
+            .values({ id: t.fam, professionalId: p.id, gen: 1, expiresAt })
+            .onConflictDoNothing()
+            .returning({ id: refreshFamilies.id })
+        : await app.db
+            .update(refreshFamilies)
+            .set({ gen: t.gen + 1, expiresAt })
+            .where(
+              and(
+                eq(refreshFamilies.id, t.fam),
+                eq(refreshFamilies.gen, t.gen),
+                isNull(refreshFamilies.revokedAt),
+              ),
+            )
+            .returning({ id: refreshFamilies.id });
+    if (!ok) {
+      // Two requests racing with the same token (two tabs, a retry): the loser just gets 401.
+      const [row] = await app.db
+        .select()
+        .from(refreshFamilies)
+        .where(eq(refreshFamilies.id, t.fam));
+      const race =
+        row &&
+        !row.revokedAt &&
+        row.gen === t.gen + 1 &&
+        Date.now() - row.updatedAt.getTime() < REFRESH_RACE_MS;
+      if (race) throw expired();
+      await revoke(t.fam, p.id, expiresAt);
+      await audit(app.db, p.id, 'system', 'auth.refresh_reused', { family: t.fam });
+      throw expired();
+    }
+    return next;
+  });
+
+  route(app, a.logout, async (req) => {
+    let t: ReturnType<typeof app.verifyRefresh> | null = null;
+    try {
+      t = app.verifyRefresh(req.body.refreshToken);
+    } catch {
+      // Unknown or expired: nothing left to end.
+    }
+    const [p] = t
+      ? await app.db
+          .select({ id: professionals.id })
+          .from(professionals)
+          .where(eq(professionals.id, t.professionalId))
+      : [];
+    if (t && p) await revoke(t.fam, p.id, new Date((t.exp ?? 0) * 1000));
+    return { ok: true as const };
   });
 
   route(app, a.me, async (req) => loadMe(app, req.scope.professionalId));
@@ -71,7 +145,7 @@ const auth: FastifyPluginAsync = async (app) => {
       .where(eq(professionals.id, req.scope.professionalId));
     if (!p) throw notFound('Profissional');
     return deleteAccount(app.messaging.core, req.scope.professionalId, req.body, () =>
-      consumeOtp(app.db, app.config, p.phone, req.body.code, 'delete_account'),
+      consumeOtp(app, p.phone, req.body.code, ['delete_account']).then(() => {}),
     );
   });
 

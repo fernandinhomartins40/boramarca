@@ -73,7 +73,8 @@ const ai: FastifyPluginAsync = async (app) => {
     const p = await update(
       pid,
       {
-        ...(aiEnabled !== undefined && { aiEnabled, ...(aiEnabled && { aiPausedUntil: null }) }),
+        // Either way the timed pause is over: switching off must not end when the pause would (M6).
+        ...(aiEnabled !== undefined && { aiEnabled, aiPausedUntil: null }),
         ...(aiTone && { aiTone }),
         ...(autonomy && { autonomy: { ...cur.autonomy, ...autonomy, change_other_client: false } }),
       },

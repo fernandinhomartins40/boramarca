@@ -20,7 +20,7 @@ pnpm --filter @boramarca/api dev   # http://localhost:3333
 
 | Módulo          | Rotas                                                                                                                                                                                                                              |
 | --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `auth`          | `POST /auth/otp/request`, `/auth/otp/verify`, `/auth/refresh`, `GET/PATCH/DELETE /me`                                                                                                                                              |
+| `auth`          | `POST /auth/otp/request`, `/auth/otp/verify`, `/auth/refresh`, `/auth/logout`, `GET/PATCH/DELETE /me`                                                                                                                              |
 | `catalog`       | CRUD `/services` + `POST /services/reorder`, CRUD `/working-hours` + `PUT /working-hours`, CRUD `/time-off`                                                                                                                        |
 | `clients`       | CRUD `/clients` (busca, ordem, "sumidos", cursor), `GET /clients/:id/stats`, `GET /clients/:id/appointments`                                                                                                                       |
 | `agenda`        | `GET /agenda?date=`, `GET /slots`, `POST /appointments`, `GET /appointments/:id`, `POST /appointments/:id/{reschedule,cancel,confirm,arrive,done,no-show,delay-notice}`                                                            |
@@ -35,7 +35,7 @@ pnpm --filter @boramarca/api dev   # http://localhost:3333
 | `voice`         | `POST /voice/command`, `GET /voice/summary?moment=open\|close`                                                                                                                                                                     |
 | `salon`         | `GET /salon/day`, `GET /salon/reports`, CRUD `/salon/team`, `GET /salon/clients` (`format=csv`, `onWaitlist`), `GET /salon/plan`, `POST /salon/decisions/:id/answer`, `POST /salon/appointments/:id/reschedule`, `POST /kit-leads` |
 | `site`          | `POST /leads` (pública, limite por IP, campo-armadilha `website`)                                                                                                                                                                  |
-| `alexa`         | `POST /alexa/skill` (assinatura da Amazon), `GET/POST /alexa/oauth/authorize`, `POST /alexa/oauth/token`, `GET/PATCH /alexa/settings`                                                                                              |
+| `alexa`         | `POST /alexa/skill` (assinatura da Amazon), `GET/POST /alexa/oauth/authorize`, `POST /alexa/oauth/token`, `GET/PATCH /alexa/settings`, `DELETE /alexa/link`                                                                        |
 
 Peças transversais:
 
@@ -212,7 +212,8 @@ Usam a infraestrutura do Docker: banco `boramarca_test` (recriado do zero a cada
   Só entra quem já tem conta (número desconhecido: 404, nada é criado). `POST
 /v1/alexa/oauth/token` (form-urlencoded, Basic ou credenciais no corpo): troca o código
   (`verifyPkce`, mesmo `redirect_uri`) ou renova; tokens guardados só como SHA-256, access de 1 h,
-  refresh sem validade (apagar a linha desfaz o vínculo; excluir a conta apaga em cascata).
+  refresh girado a cada uso e válido por 90 dias sem uso; um vínculo novo apaga o anterior;
+  `DELETE /v1/alexa/link` desvincula (excluir a conta apaga em cascata).
 - Ajustes por profissional em `alexa_settings` (`GET/PATCH /v1/alexa/settings`): anúncio
   ligado, dispositivo e o **token do Voice Monkey da conta do próprio profissional**, cifrado com
   AES-256-GCM (`DATA_ENCRYPTION_KEY`, `src/lib/secret-box.ts`) e nunca devolvido

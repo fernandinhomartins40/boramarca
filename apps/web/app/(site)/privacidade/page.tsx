@@ -117,8 +117,9 @@ export default function PrivacidadePage() {
         horário de outro cliente sempre vira uma pergunta para o profissional.
       </p>
       <p>
-        Para a IA vai só o mínimo: o primeiro nome do cliente, as mensagens recentes da conversa, a
-        agenda do dia resumida e a lista de serviços.{' '}
+        Para a IA vai só o mínimo: o primeiro nome do cliente, as mensagens recentes da conversa, os
+        horários dele, os horários ocupados e livres do dia (sem nome, serviço ou qualquer dado de
+        outros clientes) e a lista de serviços.{' '}
         <strong>O telefone do cliente nunca é enviado à IA.</strong>
       </p>
       <h3>Contas de saúde</h3>
@@ -180,8 +181,10 @@ export default function PrivacidadePage() {
           mensagens de voz dos clientes.
         </li>
         <li>
-          <strong>Notificações:</strong> Google (Firebase Cloud Messaging) e Apple (Apple Push
-          Notification service), que recebem o token do aparelho e o texto da notificação.
+          <strong>Notificações:</strong> Expo (Estados Unidos), que repassa as notificações do app,
+          e Google (Firebase Cloud Messaging) e Apple (Apple Push Notification service), que as
+          entregam ao aparelho. Recebem o token do aparelho e o texto da notificação; em contas de
+          saúde, a notificação de mensagem nova leva só o nome do cliente, sem o texto.
         </li>
         <li>
           <strong>Envio do código de acesso:</strong> o provedor de SMS que entrega o código ao seu
@@ -217,6 +220,10 @@ export default function PrivacidadePage() {
         <li>Códigos de acesso: guardados só em forma cifrada e expiram em 10 minutos.</li>
         <li>Contatos do site: até 12 meses ou até você pedir a exclusão.</li>
         <li>Registros técnicos dos servidores: até 30 dias.</li>
+        <li>
+          Histórico de ações da conta (o que a IA, o sistema e você fizeram, sem o conteúdo das
+          mensagens nem telefones): até 90 dias.
+        </li>
         <li>Cópias de segurança: substituídas no ciclo de rotação, em até 30 dias.</li>
         <li>
           Registro de exclusão de conta: um código irreversível gerado a partir do telefone, as
@@ -227,7 +234,7 @@ export default function PrivacidadePage() {
 
       <h2 id="exclusao">10. Como excluir sua conta</h2>
       <p>
-        Você pode excluir a conta a qualquer momento no app (Ajustes → Excluir conta) ou, sem o app,
+        Você pode excluir a conta a qualquer momento no app (Ajustes → Conta → Excluir conta) ou, sem o app,
         na página <Link href="/excluir-conta">Excluir conta</Link>. A exclusão exige um código
         enviado ao seu celular, desconecta e apaga a sessão do WhatsApp, cancela lembretes e apaga
         seus dados e os dos seus clientes: cadastro, agenda, conversas, mensagens, transcrições e
@@ -243,7 +250,8 @@ export default function PrivacidadePage() {
         <li>portabilidade dos dados;</li>
         <li>eliminação dos dados e informação sobre com quem eles foram compartilhados;</li>
         <li>
-          revogação do consentimento, como a permissão do microfone ou a integração com a Alexa;
+          revogação do consentimento, como a permissão do microfone ou a integração com a Alexa
+          (desvincular a Alexa apaga na hora o acesso dela à sua conta);
         </li>
         <li>revisão de decisões tomadas só com base em tratamento automatizado.</li>
       </ul>

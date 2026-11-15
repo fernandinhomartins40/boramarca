@@ -12,9 +12,10 @@ const realtime: FastifyPluginAsync = async (app) => {
   app.get('/realtime', { websocket: true, schema: { hide: true } }, (socket, req) => {
     const q = RealtimeQuery.safeParse(req.query);
     let professionalId: string;
+    let exp: number;
     try {
       if (!q.success) throw new Error('missing token');
-      professionalId = app.verifyAccess(q.data.token).professionalId;
+      ({ professionalId, exp } = app.verifyAccess(q.data.token));
     } catch {
       socket.close(WS_UNAUTHORIZED, 'unauthorized');
       return;
@@ -22,7 +23,16 @@ const realtime: FastifyPluginAsync = async (app) => {
     const unsubscribe = app.bus.subscribe(professionalId, (event) => {
       if (socket.readyState === socket.OPEN) socket.send(JSON.stringify(event));
     });
-    socket.on('close', unsubscribe);
+    // The session ends with its token (expired, or the account was deleted): the app reconnects
+    // with a fresh one.
+    const expiry = setTimeout(
+      () => socket.close(WS_UNAUTHORIZED, 'token expired'),
+      Math.min(2 ** 31 - 1, Math.max(0, exp - Date.now())),
+    );
+    socket.on('close', () => {
+      clearTimeout(expiry);
+      unsubscribe();
+    });
   });
 };
 

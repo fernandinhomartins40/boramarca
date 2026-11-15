@@ -165,9 +165,13 @@ describe('agenda motor against Postgres', () => {
   it('status flow: confirm, arrive, done; no-show; invalid moves are 409', async () => {
     const v = await book(at('11:00'));
     expect((await agenda.confirm({ ...ctx(), actor: 'client' }, v.id)).status).toBe('confirmed');
-    expect((await agenda.markArrived(ctx(), v.id)).status).toBe('in_service');
-    expect(await code(agenda.markNoShow(ctx(), v.id))).toBe('INVALID_STATUS');
-    expect((await agenda.markDone(ctx(), v.id)).status).toBe('done');
+    // Before the start time: no arrival and no "done" (M8: a future visit is not a past one).
+    expect(await code(agenda.markArrived(ctx(), v.id))).toBe('NOT_STARTED');
+    expect(await code(agenda.markDone(ctx(), v.id))).toBe('NOT_STARTED');
+    const later = createAgenda({ db, bus, now: () => new Date(at('11:05')) });
+    expect((await later.markArrived(ctx(), v.id)).status).toBe('in_service');
+    expect(await code(later.markNoShow(ctx(), v.id))).toBe('INVALID_STATUS');
+    expect((await later.markDone(ctx(), v.id)).status).toBe('done');
     const w = await book(at('08:00'));
     expect((await agenda.markNoShow(ctx(), w.id)).status).toBe('no_show');
     const hist = await agenda.getAppointment(pro.professionalId, v.id);

@@ -79,7 +79,18 @@ export type Config = z.infer<typeof Env>;
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   // Empty strings in .env mean "unset".
   const cleaned = Object.fromEntries(Object.entries(env).filter(([, v]) => v !== ''));
-  const parsed = Env.safeParse(cleaned);
+  const parsed = Env.superRefine((c, ctx) => {
+    if (c.NODE_ENV !== 'production') return;
+    // B6: an .env.prod copied from the example must not boot (anyone could forge JWTs).
+    const bad = (path: string, message: string) =>
+      ctx.addIssue({ code: 'custom', path: [path], message });
+    for (const k of ['JWT_ACCESS_SECRET', 'JWT_REFRESH_SECRET', 'WHATSAPP_WEBHOOK_SECRET'] as const)
+      if (c[k]?.includes('change-me')) bad(k, 'troque o valor de exemplo');
+    if (c.JWT_ACCESS_SECRET === c.JWT_REFRESH_SECRET)
+      bad('JWT_REFRESH_SECRET', 'precisa ser diferente de JWT_ACCESS_SECRET');
+    if (c.WHATSAPP_WEBHOOK_SECRET && c.WHATSAPP_WEBHOOK_SECRET.length < 16)
+      bad('WHATSAPP_WEBHOOK_SECRET', 'use 16 caracteres ou mais');
+  }).safeParse(cleaned);
   if (!parsed.success) {
     throw new Error(`Configuração inválida:\n${z.prettifyError(parsed.error)}`);
   }

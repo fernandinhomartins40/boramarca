@@ -14,7 +14,7 @@ import {
 import type { Tx } from '../../db/client';
 import { appointments, clients, services, waitlistEntries, waitlistOffers } from '../../db/schema';
 import { audit } from '../../lib/audit';
-import { loadPro, type Core } from '../../lib/core';
+import { aiActive, loadPro, type Core } from '../../lib/core';
 import { AppError, notFound } from '../../lib/errors';
 import { utcToZoned, weekdayOf } from '../../lib/time';
 import type { Outbox } from '../whatsapp/send';
@@ -184,6 +184,8 @@ export function createWaitlist(core: Core, deps: { outbox: Outbox }) {
     const pro = await loadPro(db, slot.professionalId);
     const rule = pro.p.waitlistRule;
     if (!rule.enabled && !opts.entryId) return null;
+    // Automatic offers are the assistant talking: none while the AI is off or paused (M5).
+    if (!opts.entryId && !aiActive(pro.p, core.now())) return null;
     const tz = pro.salon.timezone;
     const made = await createOffer(slot, rule.waitMinutes, tz, opts.entryId);
     if (!made) return null;
