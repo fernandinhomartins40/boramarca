@@ -1,6 +1,6 @@
-import { PlaceholderScreen } from '@/components';
+import { ClientsScreen } from '@/features/clients/ClientsScreen';
 
-// Empty route created by A4; replaced by the screen of Prompt 09.
+/** Deep link to the waitlist: the Clientes screen opened on the "Lista de espera" segment. */
 export default function ListaDeEsperaScreen() {
-  return <PlaceholderScreen title="Lista de espera" spec="Prompt 09" back />;
+  return <ClientsScreen initialTab="espera" />;
 }

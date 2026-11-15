@@ -194,3 +194,11 @@ export const DelayNoticeResponse = z.object({
   sentText: z.string(),
 });
 export type DelayNoticeResponse = z.infer<typeof DelayNoticeResponse>;
+
+// ---- POST /appointments/:id/confirm: no body, responds with the updated appointment (B3)
+export const AppointmentConfirmResponse = AppointmentView;
+export type AppointmentConfirmResponse = z.infer<typeof AppointmentConfirmResponse>;
+
+// ---- GET /clients/:id/appointments: client history, newest first (B3, perfil do cliente)
+export const ClientAppointmentsResponse = z.object({ items: z.array(AppointmentView) });
+export type ClientAppointmentsResponse = z.infer<typeof ClientAppointmentsResponse>;

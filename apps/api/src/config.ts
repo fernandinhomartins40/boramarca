@@ -26,6 +26,32 @@ const Env = z.object({
   PUBLIC_API_URL: z.url().optional(),
   REVIEW_PHONE: z.string().optional(),
   REVIEW_OTP: z.string().optional(),
+  // Send guard (packages/whatsapp readSendGuardConfig), LLM and transcription (packages/ia
+  // create*FromEnv): validated by those packages; kept here so the whole env is in one place.
+  WA_GUARD_PER_MINUTE: z.string().optional(),
+  WA_GUARD_PER_DAY: z.string().optional(),
+  WA_GUARD_TYPING_MIN_SECONDS: z.string().optional(),
+  WA_GUARD_TYPING_MAX_SECONDS: z.string().optional(),
+  WA_GUARD_MAX_CHARS: z.string().optional(),
+  WA_GUARD_MAX_PARTS: z.string().optional(),
+  WA_GUARD_DROP_QUEUED_AFTER_MINUTES: z.string().optional(),
+  LLM_PRIMARY_BASE_URL: z.string().optional(),
+  LLM_PRIMARY_API_KEY: z.string().optional(),
+  LLM_PRIMARY_MODEL: z.string().optional(),
+  LLM_FALLBACK_BASE_URL: z.string().optional(),
+  LLM_FALLBACK_API_KEY: z.string().optional(),
+  LLM_FALLBACK_MODEL: z.string().optional(),
+  LLM_TIMEOUT_MS: z.string().optional(),
+  TRANSCRIBE_BASE_URL: z.string().optional(),
+  TRANSCRIBE_API_KEY: z.string().optional(),
+  TRANSCRIBE_MODEL: z.string().optional(),
+  TRANSCRIBE_LANGUAGE: z.string().optional(),
+  /** `expo` (default in production) or `fake` (default elsewhere: notifications go to the log). */
+  PUSH_PROVIDER: z.enum(['expo', 'fake']).optional(),
+  /** Only when "enhanced push security" is on in the Expo project. */
+  EXPO_ACCESS_TOKEN: z.string().optional(),
+  /** Minutes the professional has to answer a Decision before the neutral reply goes out. */
+  DECISION_DEADLINE_MINUTES: z.coerce.number().int().min(1).max(240).optional(),
 });
 
 export type Config = z.infer<typeof Env>;

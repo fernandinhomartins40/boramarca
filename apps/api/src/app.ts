@@ -17,12 +17,18 @@ import { registerErrorHandler } from './lib/errors';
 import auth from './plugins/auth';
 import type { OtpSender } from './modules/auth/otp';
 import infra from './plugins/infra';
+import messaging, { type MessagingOverrides } from './plugins/messaging';
 import { healthPayload } from './modules/health';
 
 const here = dirname(fileURLToPath(import.meta.url));
 
-/** `overrides` lets tests (and a future SMS provider) swap the OTP sender. */
-export async function buildApp(config: Config, overrides: { otpSender?: OtpSender } = {}) {
+export interface AppOverrides extends MessagingOverrides {
+  otpSender?: OtpSender;
+  now?: () => Date;
+}
+
+/** `overrides` lets tests swap the OTP sender, WhatsApp gateway, LLM, push and clock. */
+export async function buildApp(config: Config, overrides: AppOverrides = {}) {
   const app = Fastify({
     logger: config.LOG_LEVEL === 'silent' ? false : { level: config.LOG_LEVEL },
   });
@@ -33,8 +39,9 @@ export async function buildApp(config: Config, overrides: { otpSender?: OtpSende
   registerErrorHandler(app);
 
   await app.register(cors, { origin: config.CORS_ORIGINS });
-  await app.register(infra, { config });
+  await app.register(infra, { config, now: overrides.now });
   await app.register(auth, { otpSender: overrides.otpSender });
+  await app.register(messaging, { overrides });
   await app.register(websocket);
   await app.register(swagger, {
     openapi: {

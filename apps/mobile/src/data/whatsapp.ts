@@ -28,10 +28,19 @@ export const mockWhatsAppState = {
   startedAt: 0,
   /** Force the next pairing to end in `error` ("Tentar de novo" path). */
   failNextPairing: false,
+  /** Next QR / pairing code expires in a few seconds (dev menu: "código expirado"). */
+  expireNextCode: false,
   errorMessage: null as string | null,
 };
 
 const QR_TTL_SECONDS = 45;
+const EXPIRED_TTL_SECONDS = 5;
+
+function codeTtlMinutes() {
+  const short = mockWhatsAppState.expireNextCode;
+  mockWhatsAppState.expireNextCode = false;
+  return (short ? EXPIRED_TTL_SECONDS : QR_TTL_SECONDS) / 60;
+}
 const WAIT_MS = 6000;
 const CONNECT_MS = 3000;
 
@@ -71,11 +80,11 @@ export const mockWhatsApp: WhatsAppData = {
   async getQr() {
     return reply({
       qr: `boramarca-demo-${Date.now()}`,
-      expiresAt: minutesFromNow(QR_TTL_SECONDS / 60),
+      expiresAt: minutesFromNow(codeTtlMinutes()),
     });
   },
   async getPairingCode() {
-    return reply({ code: 'BORA4826', expiresAt: minutesFromNow(QR_TTL_SECONDS / 60) });
+    return reply({ code: 'BORA4826', expiresAt: minutesFromNow(codeTtlMinutes()) });
   },
   async disconnect() {
     Object.assign(mockWhatsAppState, { status: 'disconnected', startedAt: 0 });

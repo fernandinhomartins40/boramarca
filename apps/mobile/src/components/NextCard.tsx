@@ -24,12 +24,13 @@ export function NextCard({ title, relative, actionLabel, onAction, onPress }: Ne
       style={{
         flexDirection: 'row',
         alignItems: 'center',
-        gap: t.spacing.md,
+        gap: t.spacing.sm,
         paddingVertical: t.spacing.sm,
+        paddingHorizontal: t.spacing.md,
       }}
     >
       <Clock color={t.colors.text} size={t.sizes.icon} />
-      <Text style={{ flex: 1 }}>
+      <Text style={{ flex: 1 }} numberOfLines={1} adjustsFontSizeToFit>
         <Text weight="bold">{title}</Text>
         <Text color="textMuted"> · {relative}</Text>
       </Text>
@@ -42,7 +43,7 @@ export function NextCard({ title, relative, actionLabel, onAction, onPress }: Ne
           style={({ pressed }) => ({
             minHeight: t.touchTarget.min - t.spacing.md,
             justifyContent: 'center',
-            paddingHorizontal: t.spacing.md,
+            paddingHorizontal: t.spacing.sm,
             borderRadius: t.radii.sm,
             borderWidth: t.sizes.border,
             borderColor: t.colors.primaryText,
@@ -51,7 +52,7 @@ export function NextCard({ title, relative, actionLabel, onAction, onPress }: Ne
           })}
         >
           <View>
-            <Text variant="bodySmall" weight="semibold" color="primaryText">
+            <Text variant="caption" weight="semibold" color="primaryText" numberOfLines={1}>
               {actionLabel}
             </Text>
           </View>

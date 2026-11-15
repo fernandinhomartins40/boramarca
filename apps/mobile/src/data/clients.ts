@@ -8,8 +8,8 @@ import type {
   ClientUpdate,
   Id,
 } from '@boramarca/shared';
-import { mockAppointments } from './agenda';
-import { clients, ids, professional } from './mock/fixtures';
+import { mockAppointments, visitHistoryOf } from './agenda';
+import { clients, professional } from './mock/fixtures';
 import { base, fail, minutesAgo, newId, nowIso, reply } from './mock/util';
 import { mockWaitlistEntries } from './waitlist';
 
@@ -24,21 +24,9 @@ export interface ClientsData {
 }
 
 const DAY = 60 * 24;
-/** History beyond today's agenda: visits, last service, no-shows (reference 10-clientes). */
-const history: Record<
-  string,
-  { visits: number; lastDaysAgo: number | null; noShows: number; intervalDays: number | null }
-> = {
-  [ids.client.anaPaula]: { visits: 12, lastDaysAgo: 18, noShows: 0, intervalDays: 21 },
-  [ids.client.beatriz]: { visits: 6, lastDaysAgo: 18, noShows: 0, intervalDays: 14 },
-  [ids.client.juliana]: { visits: 9, lastDaysAgo: 18, noShows: 1, intervalDays: 21 },
-  [ids.client.lucas]: { visits: 4, lastDaysAgo: 18, noShows: 0, intervalDays: 30 },
-  [ids.client.rafaelFerreira]: { visits: 3, lastDaysAgo: 45, noShows: 2, intervalDays: 30 },
-  [ids.client.carlos]: { visits: 2, lastDaysAgo: 30, noShows: 0, intervalDays: 30 },
-};
 
 function summary(c: Client): ClientSummary {
-  const h = history[c.id] ?? { visits: 1, lastDaysAgo: 7, noShows: 0, intervalDays: null };
+  const h = visitHistoryOf(c.id);
   return {
     ...c,
     lastVisitAt: h.lastDaysAgo === null ? null : minutesAgo(h.lastDaysAgo * DAY),
@@ -86,7 +74,7 @@ export const mockClients: ClientsData = {
       visitsCount: s.visitsCount,
       averageTicketCents: 15000,
       noShowCount: s.noShowCount,
-      averageIntervalDays: history[id]?.intervalDays ?? null,
+      averageIntervalDays: visitHistoryOf(id).intervalDays,
       lastVisitAt: s.lastVisitAt,
       nextAppointmentAt: next?.startsAt ?? null,
     });

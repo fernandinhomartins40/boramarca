@@ -40,11 +40,13 @@ export function SummaryStrip({ items }: { items: readonly SummaryItem[] }) {
           ) : null}
           <View
             style={{
-              flex: 1,
+              flexGrow: 1,
+              flexShrink: 1,
               flexDirection: 'row',
               alignItems: 'center',
               justifyContent: 'center',
               gap: t.spacing.xs,
+              paddingHorizontal: t.spacing.sm,
             }}
           >
             <Icon color={t.colors.text} size={t.sizes.iconSm} />

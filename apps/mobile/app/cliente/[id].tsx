@@ -1,6 +1,7 @@
-import { PlaceholderScreen } from '@/components';
+import { useLocalSearchParams } from 'expo-router';
+import { ClientProfileScreen } from '@/features/clients/ClientProfileScreen';
 
-// Empty route created by A4; replaced by the screen of Prompt 09.
-export default function IdScreen() {
-  return <PlaceholderScreen title="Cliente" spec="Prompt 09" back />;
+export default function ClienteScreen() {
+  const { id } = useLocalSearchParams<{ id: string }>();
+  return <ClientProfileScreen id={id} />;
 }

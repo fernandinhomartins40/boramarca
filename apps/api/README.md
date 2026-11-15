@@ -18,14 +18,19 @@ pnpm --filter @boramarca/api dev   # http://localhost:3333
 
 ## Módulos (`src/modules/<nome>/index.ts`, carregados pelo autoload em `/v1`)
 
-| Módulo     | Rotas                                                                                                                                              |
-| ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `auth`     | `POST /auth/otp/request`, `/auth/otp/verify`, `/auth/refresh`, `GET/PATCH /me` (`DELETE /me` é do C1)                                              |
-| `catalog`  | CRUD `/services` + `POST /services/reorder`, CRUD `/working-hours` + `PUT /working-hours`, CRUD `/time-off`                                        |
-| `clients`  | CRUD `/clients` (busca, ordem, "sumidos", cursor), `GET /clients/:id/stats`                                                                        |
-| `agenda`   | `GET /agenda?date=`, `GET /slots`, `POST /appointments`, `GET /appointments/:id`, `POST /appointments/:id/{reschedule,cancel,arrive,done,no-show}` |
-| `realtime` | `WS /realtime?token=<accessToken>` (fecha com 4401 se o token for inválido)                                                                        |
-| `health`   | `GET /health`, `GET /v1/health`                                                                                                                    |
+| Módulo          | Rotas                                                                                                                                              |
+| --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `auth`          | `POST /auth/otp/request`, `/auth/otp/verify`, `/auth/refresh`, `GET/PATCH /me` (`DELETE /me` é do C1)                                              |
+| `catalog`       | CRUD `/services` + `POST /services/reorder`, CRUD `/working-hours` + `PUT /working-hours`, CRUD `/time-off`                                        |
+| `clients`       | CRUD `/clients` (busca, ordem, "sumidos", cursor), `GET /clients/:id/stats`                                                                        |
+| `agenda`        | `GET /agenda?date=`, `GET /slots`, `POST /appointments`, `GET /appointments/:id`, `POST /appointments/:id/{reschedule,cancel,arrive,done,no-show}` |
+| `realtime`      | `WS /realtime?token=<accessToken>` (fecha com 4401 se o token for inválido)                                                                        |
+| `health`        | `GET /health`, `GET /v1/health`                                                                                                                    |
+| `whatsapp`      | `POST/DELETE /whatsapp/session`, `GET /whatsapp/{qr,pairing-code,status}`, `POST /webhooks/whatsapp/:instance`                                     |
+| `conversations` | `GET /conversations`, `GET/POST /conversations/:id/messages`, `POST /conversations/:id/handoff`                                                    |
+| `decisions`     | `GET /decisions`, `POST /decisions/:id/answer`, `POST /decisions/:id/take-over`                                                                    |
+| `ai`            | `POST /ai/pause`, `POST /ai/resume`, `PATCH /ai/settings`, `POST /messages/preview`                                                                |
+| `devices`       | `POST /devices`, `DELETE /devices/:id`                                                                                                             |
 
 Peças transversais:
 
@@ -87,6 +92,46 @@ padrão usa Redis pub/sub (canal `boramarca:rt:<professionalId>`), então evento
 worker chegam aos WebSockets da API. `createMemoryEventBus()` serve para testes.
 `realtimeEvent('decision.created', { decision })` monta o evento com `at`.
 
+## Mensagens, IA e Decisões (B1)
+
+Ligação em `src/plugins/messaging.ts` (`app.messaging`): gateway, LLM, transcrição, push, filas
+BullMQ (`src/lib/queues.ts`) e workers, que rodam no próprio processo da API.
+
+1. **Webhook** (`modules/whatsapp/index.ts`): header `x-boramarca-webhook-secret` comparado em tempo
+   constante (401 se não bater; 503 sem `WHATSAPP_WEBHOOK_SECRET`). Resposta 200 imediata.
+2. `modules/whatsapp/inbound.ts`: grava cliente (cria se novo), conversa e mensagem;
+   `provider_message_id` único deduplica (`whatsapp.duplicate_ignored` no audit). Job `inbound`.
+3. Worker `inbound` (um por conversa por vez, trava no Redis): transcreve áudio, para se a IA está
+   desligada/pausada, sem LLM ou com a conversa em `human` (só notifica o app); senão `buildContext` →
+   `interpretClientMessage` → `ai_note` → motor de regras.
+4. **Motor de regras** (`modules/ai/tools.ts`): confere que **todo id** (agendamento, serviço,
+   cliente, inclusive dentro das opções de uma Decisão) é do profissional; se algum não for, nada
+   roda (`ai.tool_rejected`) e vira Decisão "Eu respondo". Autonomia: `marcar`/`remarcar` só com
+   `book_free_slot_known_client` e cliente já atendido (encaixe sempre pergunta); `cancelar` com
+   `cancel_on_request` (e avisa o profissional); `confirmar_presenca` com `confirm_reminders`.
+   **Mexer no agendamento ou mandar mensagem para outro cliente sempre vira Decisão**
+   (`change_other_client` não é lido). Ação que não rodou como a IA pode ter prometido → a resposta
+   da IA não é enviada. Ações rodam por `modules/ai/actions.ts` → `app.agenda` (createAgenda).
+5. **Decisões** (`modules/decisions/service.ts`): prazo `DECISION_DEADLINE_MINUTES` (padrão 10) em
+   job `decisions` (`timeout-<id>`): envia "Já te confirmo!", grava `timeout_notified_at`, notifica e
+   **continua pendente**. Expira (`expire-<id>` no horário proposto, ou quando outro agendamento ocupa
+   o horário) com aviso ao cliente. `POST /decisions/:id/answer` aceita `optionId` ou `text`
+   (`interpretProfessionalAnswer`); "deixa que eu respondo" = take-over. `onCreated(fn)` é o ponto de
+   extensão para o anúncio da Alexa/Voice Monkey.
+6. **Envio** (`modules/whatsapp/send.ts`, o módulo de envio): `outbox.enqueue` grava a mensagem e
+   enfileira em `outbound`; o worker usa só `createSender` (guarda), uma mensagem por instância por
+   vez (trava no Redis), segura com sessão caída e descarta após 30 min. `recipientFacts` vem do
+   banco; `waitlistSlotHasOtherActiveOffer` é sempre passado (false salvo outra oferta ativa para a
+   mesma vaga). Regra ESLint em `eslint.config.mjs` proíbe `.sendText(`/`.sendPresence(` fora de
+   `send.ts` e `gateway.ts`.
+7. **Lista de espera (C1)**: ligar a oferta automática em `app.agenda.onSlotFreed` e enviar com
+   `outbox.enqueue({ purpose: 'waitlist_offer', waitlistSlotStartsAt })`.
+
+Gateway: Evolution com `EVOLUTION_BASE_URL`+`EVOLUTION_API_KEY`; sem elas, `FakeGateway` fora de
+produção (em produção, as chamadas falham com 502). A conta de revisão (`REVIEW_PHONE`) usa sempre o
+WhatsApp simulado (instância `demo-…`, conecta sozinho em 5 s). LLM/transcrição sem chave: simulados
+fora de produção, desligados em produção. Push: `PUSH_PROVIDER` (`expo` em produção, `fake` fora).
+
 ## Testes
 
 ```bash
@@ -102,6 +147,10 @@ Usam a infraestrutura do Docker: banco `boramarca_test` (recriado do zero a cada
 - `auth/auth.test.ts` — request/verify/refresh, tentativas, expiração, `123456` recusado em produção.
 - `isolation.test.ts` — um profissional não lê nem altera nada de outro (404 em todas as rotas).
 - `api.test.ts` — cadastro, clientes e estatísticas por HTTP, WebSocket e OpenAPI.
+- `messaging.test.ts` — ponta a ponta com `FakeGateway`/`FakeLlm`/`FakePush`, filas reais: fluxo do
+  PDF (passos 1–7, incluindo o prazo esgotado e a expiração), mensagem duplicada, segredo errado, IA
+  pausada, `change_other_client` travado, ids de outro profissional recusados, assumir/devolver
+  conversa, áudio, guarda bloqueando destinatário desconhecido, prévia e dispositivos.
 
 ## Variáveis
 

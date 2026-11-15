@@ -12,6 +12,8 @@ import type {
   Service,
   ServiceCreate,
   ServiceUpdate,
+  TimeOff,
+  TimeOffCreate,
   WorkingHours,
   WorkingHoursReplaceBody,
 } from '@boramarca/shared';
@@ -37,6 +39,10 @@ export interface ProfileData {
   reorderServices(ids: Id[]): Promise<Service[]>;
   getWorkingHours(): Promise<WorkingHours[]>;
   replaceWorkingHours(body: WorkingHoursReplaceBody): Promise<WorkingHours[]>;
+  /** Folgas e feriados (CRUD /time-off). */
+  listTimeOff(): Promise<TimeOff[]>;
+  createTimeOff(body: TimeOffCreate): Promise<TimeOff>;
+  deleteTimeOff(id: Id): Promise<void>;
   /** Text the client would receive (confirmação, lembrete, exemplo de tom...). */
   previewMessage(body: MessagePreviewRequest): Promise<MessagePreviewResponse>;
 }
@@ -65,6 +71,8 @@ const aiSettings = (): AiSettings => ({
 function findService(id: Id) {
   return services.find((s) => s.id === id) ?? fail(404, 'NOT_FOUND', 'Serviço não encontrado');
 }
+
+const timeOff: TimeOff[] = [];
 
 const sorted = () => [...services].sort((a, b) => a.position - b.position);
 
@@ -137,6 +145,26 @@ export const mockProfile: ProfileData = {
       ...body.items.map((w) => ({ ...base(newId(), 0), professionalId: ids.professional, ...w })),
     );
     return reply(workingHours);
+  },
+  async listTimeOff() {
+    return reply([...timeOff].sort((a, b) => a.startsAt.localeCompare(b.startsAt)));
+  },
+  async createTimeOff(body) {
+    const item: TimeOff = {
+      ...base(newId(), 0),
+      professionalId: ids.professional,
+      startsAt: body.startsAt,
+      endsAt: body.endsAt,
+      reason: body.reason ?? null,
+    };
+    timeOff.push(item);
+    return reply(item);
+  },
+  async deleteTimeOff(id) {
+    const i = timeOff.findIndex((x) => x.id === id);
+    if (i < 0) fail(404, 'NOT_FOUND', 'Folga não encontrada');
+    timeOff.splice(i, 1);
+    return reply(undefined);
   },
   async previewMessage(body) {
     const tone = body.tone ?? professional.aiTone;

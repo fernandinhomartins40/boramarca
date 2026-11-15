@@ -5,6 +5,8 @@ import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { ToastHost } from '@/components/Toast';
+import { useAuthGuard, useSession } from '@/features/auth';
+import { GlobalBanners } from '@/features/settings';
 import { useTheme } from '@/theme';
 import { interFonts } from '@/theme/fonts';
 
@@ -14,7 +16,10 @@ SplashScreen.preventAutoHideAsync().catch(() => undefined);
 export default function RootLayout() {
   const t = useTheme();
   const [loaded, error] = useFonts(interFonts);
-  const ready = loaded || !!error; // on font error, fall back to the system font instead of hanging
+  const hydrated = useSession((s) => s.hydrated);
+  // on font error, fall back to the system font instead of hanging; wait for the stored session
+  const ready = (loaded || !!error) && hydrated;
+  useAuthGuard();
 
   useEffect(() => {
     if (ready) SplashScreen.hideAsync().catch(() => undefined);
@@ -40,6 +45,7 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: t.colors.bg }}>
       <ThemeProvider value={navTheme}>
         <StatusBar style={t.scheme === 'dark' ? 'light' : 'dark'} />
+        <GlobalBanners />
         <Stack
           screenOptions={{ headerShown: false, contentStyle: { backgroundColor: t.colors.bg } }}
         />

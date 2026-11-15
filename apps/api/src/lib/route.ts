@@ -22,8 +22,10 @@ export function route<C extends RouteContract>(
   app: FastifyInstance,
   c: C,
   handler: (req: RouteRequest<C>, reply: FastifyReply) => Promise<z.output<C['response']>>,
+  extra: { bodyLimit?: number } = {},
 ) {
   app.route({
+    ...extra,
     method: c.method,
     url: c.path,
     schema: {

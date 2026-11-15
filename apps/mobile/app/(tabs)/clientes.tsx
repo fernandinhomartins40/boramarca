@@ -1,6 +1,7 @@
-import { PlaceholderScreen } from '@/components';
+import { useLocalSearchParams } from 'expo-router';
+import { ClientsScreen } from '@/features/clients/ClientsScreen';
 
-// Empty route created by A4; replaced by the screen of Prompt 09.
 export default function ClientesScreen() {
-  return <PlaceholderScreen title="Clientes" spec="Prompt 09" tab />;
+  const { aba } = useLocalSearchParams<{ aba?: string }>();
+  return <ClientsScreen key={aba} initialTab={aba === 'espera' ? 'espera' : 'clientes'} />;
 }

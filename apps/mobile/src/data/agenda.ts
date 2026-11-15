@@ -9,6 +9,7 @@ import type {
   AppointmentReschedule,
   AppointmentStatus,
   AppointmentView,
+  ClientAppointmentsResponse,
   DateOnly,
   DelayNoticeBody,
   DelayNoticeResponse,
@@ -16,6 +17,15 @@ import type {
   SlotsResponse,
 } from '@boramarca/shared';
 import { clients, firstName, ids, professional, services, workingHours } from './mock/fixtures';
+import {
+  atMinute,
+  busyIntervals,
+  checkBooking,
+  countFreeSlots,
+  freeStarts,
+  minuteOfDay,
+  type DayRules,
+} from '@/utils/agenda';
 import { base, dateOf, fail, minutesAgo, newId, nowIso, reply, todayAt, uid } from './mock/util';
 
 /** Agenda and appointments (prompts 03 and 04). Owner: agent B3; api implementation: D1. */
@@ -28,10 +38,14 @@ export interface AgendaData {
   create(body: AppointmentCreate): Promise<AppointmentDetail>;
   reschedule(id: Id, body: AppointmentReschedule): Promise<AppointmentActionResponse>;
   cancel(id: Id, body: AppointmentCancel): Promise<AppointmentActionResponse>;
+  /** POST /appointments/:id/confirm — "Confirmar" a scheduled appointment (route requested by B3). */
+  confirm(id: Id): Promise<AppointmentActionResponse>;
   arrive(id: Id): Promise<AppointmentActionResponse>;
   done(id: Id): Promise<AppointmentActionResponse>;
   noShow(id: Id): Promise<AppointmentActionResponse>;
   sendDelayNotice(id: Id, body: DelayNoticeBody): Promise<DelayNoticeResponse>;
+  /** GET /clients/:id/appointments — history on the client profile, newest first. */
+  listByClient(clientId: Id): Promise<ClientAppointmentsResponse>;
 }
 
 // ---- mock store: today as in reference 04-agenda (8 atendimentos, 2 vagas, R$ 1.200)
@@ -130,54 +144,15 @@ function log(a: AppointmentView, type: AppointmentEvent['type'], description: st
   events.set(a.id, [...(events.get(a.id) ?? []), ev(a.id, type, description, 'professional')]);
 }
 
-const toMin = (hhmm: string) => Number(hhmm.slice(0, 2)) * 60 + Number(hhmm.slice(3, 5));
-const minOfDay = (iso: string) => {
-  const d = new Date(iso);
-  return d.getHours() * 60 + d.getMinutes();
-};
-
 function dayWindow(date: DateOnly) {
   const weekday = new Date(`${date}T12:00:00`).getDay();
   return workingHours.find((w) => w.weekday === weekday) ?? null;
 }
 
-/** Free starts (every 10 min) where `duration` fits: inside hours, outside lunch and appointments. */
-function freeStarts(date: DateOnly, duration: number, ignoreId?: string): number[] {
-  const wh = dayWindow(date);
-  if (!wh) return [];
-  const busy = mockAppointments
-    .filter(
-      (a) =>
-        a.id !== ignoreId &&
-        ACTIVE.concat('done').includes(a.status) &&
-        dateOf(a.startsAt) === date,
-    )
-    .map((a) => [minOfDay(a.startsAt), minOfDay(a.endsAt)] as const);
-  if (wh.lunchStart && wh.lunchEnd) busy.push([toMin(wh.lunchStart), toMin(wh.lunchEnd)]);
-  const out: number[] = [];
-  for (let s = toMin(wh.start); s + duration <= toMin(wh.end); s += 10) {
-    if (busy.every(([b, e]) => s + duration <= b || s >= e)) out.push(s);
-  }
-  return out;
-}
-
-/** Whole service-length slots left in the day, packed from the start of each gap. */
-function freeSlotsCount(date: DateOnly): number {
-  let count = 0;
-  let last = -Infinity;
-  for (const s of freeStarts(date, sessao.durationMin)) {
-    if (s >= last + sessao.durationMin) {
-      count++;
-      last = s;
-    }
-  }
-  return count;
-}
-
-const atMinute = (date: DateOnly, m: number) =>
-  new Date(
-    `${date}T${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}:00`,
-  ).toISOString();
+const rulesFor = (date: DateOnly, ignoreId?: string): DayRules => ({
+  hours: dayWindow(date),
+  busy: busyIntervals(mockAppointments, date, ignoreId),
+});
 
 /** Used by the decisions mock to run the action of an answered decision on this agenda. */
 export function applyMockAgendaAction(
@@ -229,7 +204,7 @@ export const mockAgenda: AgendaData = {
       appointments,
       summary: {
         appointmentsCount: counted.length,
-        freeSlotsCount: freeSlotsCount(date),
+        freeSlotsCount: countFreeSlots(rulesFor(date), sessao.durationMin),
         expectedRevenueCents: counted.reduce((sum, a) => sum + a.priceCents, 0),
       },
     });
@@ -239,7 +214,7 @@ export const mockAgenda: AgendaData = {
       .filter((s) => serviceIds.includes(s.id))
       .reduce((sum, s) => sum + s.durationMin, 0);
     if (!durationMin) fail(400, 'INVALID_SERVICES', 'Escolha pelo menos um serviço');
-    const slots = freeStarts(date, durationMin).map((m) => ({
+    const slots = freeStarts(rulesFor(date), durationMin).map((m) => ({
       startsAt: atMinute(date, m),
       endsAt: atMinute(date, m + durationMin),
     }));
@@ -252,7 +227,7 @@ export const mockAgenda: AgendaData = {
     const chosen = services.filter((s) => body.serviceIds.includes(s.id));
     const durationMin = chosen.reduce((sum, s) => sum + s.durationMin, 0);
     const date = dateOf(body.startsAt);
-    if (!freeStarts(date, durationMin).includes(minOfDay(body.startsAt)))
+    if (checkBooking(rulesFor(date), minuteOfDay(body.startsAt), durationMin))
       fail(409, 'SLOT_TAKEN', 'Esse horário não está livre');
     let clientId = body.clientId;
     if (!clientId && body.newClient) {
@@ -295,7 +270,7 @@ export const mockAgenda: AgendaData = {
   async reschedule(id, body) {
     const a = find(id);
     const len = new Date(a.endsAt).getTime() - new Date(a.startsAt).getTime();
-    if (!freeStarts(dateOf(body.startsAt), len / MIN, id).includes(minOfDay(body.startsAt)))
+    if (checkBooking(rulesFor(dateOf(body.startsAt), id), minuteOfDay(body.startsAt), len / MIN))
       fail(409, 'SLOT_TAKEN', 'Esse horário não está livre');
     a.startsAt = body.startsAt;
     a.endsAt = new Date(new Date(body.startsAt).getTime() + len).toISOString();
@@ -307,6 +282,7 @@ export const mockAgenda: AgendaData = {
     find(id).cancelReason = body.reason;
     return setStatus(id, 'cancelled', 'cancelled', 'Cancelado por você');
   },
+  confirm: (id) => setStatus(id, 'confirmed', 'confirmed', 'Você confirmou no app'),
   arrive: (id) => setStatus(id, 'in_service', 'arrived', 'Cliente chegou'),
   done: (id) => setStatus(id, 'done', 'done', 'Atendimento concluído'),
   noShow: (id) => setStatus(id, 'no_show', 'no_show', 'Marcado como faltou'),
@@ -318,4 +294,37 @@ export const mockAgenda: AgendaData = {
     log(a, 'delay_notice_sent', `Aviso de atraso de ${body.delayMinutes} min enviado`);
     return reply({ ok: true as const, sentText });
   },
+  async listByClient(clientId) {
+    const items = [
+      ...mockPastVisits(clientId),
+      ...mockAppointments.filter((a) => a.clientId === clientId),
+    ];
+    return reply({ items: items.sort((x, y) => y.startsAt.localeCompare(x.startsAt)) });
+  },
 };
+
+/** Past visits behind the numbers of the client profile (12 visitas, a cada 21 dias...). */
+export const mockVisitHistory: Record<
+  string,
+  { visits: number; lastDaysAgo: number | null; noShows: number; intervalDays: number | null }
+> = {
+  [ids.client.anaPaula]: { visits: 12, lastDaysAgo: 18, noShows: 0, intervalDays: 21 },
+  [ids.client.beatriz]: { visits: 6, lastDaysAgo: 18, noShows: 0, intervalDays: 14 },
+  [ids.client.juliana]: { visits: 9, lastDaysAgo: 18, noShows: 1, intervalDays: 21 },
+  [ids.client.lucas]: { visits: 4, lastDaysAgo: 18, noShows: 0, intervalDays: 30 },
+  [ids.client.rafaelFerreira]: { visits: 3, lastDaysAgo: 45, noShows: 2, intervalDays: 30 },
+  [ids.client.carlos]: { visits: 2, lastDaysAgo: 30, noShows: 0, intervalDays: 30 },
+};
+const DEFAULT_VISITS = { visits: 1, lastDaysAgo: 7, noShows: 0, intervalDays: null };
+export const visitHistoryOf = (clientId: string) => mockVisitHistory[clientId] ?? DEFAULT_VISITS;
+
+function mockPastVisits(clientId: string): AppointmentView[] {
+  const h = visitHistoryOf(clientId);
+  if (h.lastDaysAgo === null) return [];
+  return Array.from({ length: Math.min(h.visits, 6) }, (_, i) => {
+    const daysAgo = h.lastDaysAgo! + i * (h.intervalDays ?? 30);
+    const status: AppointmentStatus = i > 0 && i <= h.noShows ? 'no_show' : 'done';
+    const id = uid(0x100000 + parseInt(clientId.slice(-12), 16) * 16 + i);
+    return appt(id, clientId, todayAt('17:30', -daysAgo), status);
+  });
+}

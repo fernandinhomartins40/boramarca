@@ -1,6 +1,7 @@
-import { PlaceholderScreen } from '@/components';
+import { useLocalSearchParams } from 'expo-router';
+import { NewAppointmentScreen } from '@/features/agenda/NewAppointmentScreen';
 
-// Empty route created by A4; replaced by the screen of Prompt 04.
-export default function NovoScreen() {
-  return <PlaceholderScreen title="Novo agendamento" spec="Prompt 04" back />;
+export default function NovoAgendamentoScreen() {
+  const params = useLocalSearchParams<{ startsAt?: string; date?: string; clientId?: string }>();
+  return <NewAppointmentScreen {...params} />;
 }
