@@ -1,4 +1,5 @@
 import { randomInt } from 'node:crypto';
+import { FakeGateway } from '@boramarca/whatsapp';
 import { buildApp } from '../app';
 import { loadConfig, type Config } from '../config';
 import type { Db } from '../db/client';
@@ -62,4 +63,15 @@ export async function seedProfessional(
     .values({ professionalId: p!.id, name: 'Sessão', durationMin: 50, priceCents: 15000 })
     .returning();
   return { professionalId: p!.id, salonId: salon!.id, phone: p!.phone, serviceId: s!.id };
+}
+
+/**
+ * FakeGateway whose message ids do not repeat across test files: they all share one database,
+ * where `messages.provider_message_id` is unique (each FakeGateway counts from 1 otherwise).
+ */
+export function testGateway() {
+  const gw = new FakeGateway();
+  // shortcut: reaches the private counter; ask packages/whatsapp for an id prefix option.
+  (gw as unknown as { seq: number }).seq = randomInt(1, 2 ** 40) * 1000;
+  return gw;
 }

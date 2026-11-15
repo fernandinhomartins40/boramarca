@@ -18,19 +18,23 @@ pnpm --filter @boramarca/api dev   # http://localhost:3333
 
 ## Módulos (`src/modules/<nome>/index.ts`, carregados pelo autoload em `/v1`)
 
-| Módulo          | Rotas                                                                                                                                              |
-| --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `auth`          | `POST /auth/otp/request`, `/auth/otp/verify`, `/auth/refresh`, `GET/PATCH /me` (`DELETE /me` é do C1)                                              |
-| `catalog`       | CRUD `/services` + `POST /services/reorder`, CRUD `/working-hours` + `PUT /working-hours`, CRUD `/time-off`                                        |
-| `clients`       | CRUD `/clients` (busca, ordem, "sumidos", cursor), `GET /clients/:id/stats`                                                                        |
-| `agenda`        | `GET /agenda?date=`, `GET /slots`, `POST /appointments`, `GET /appointments/:id`, `POST /appointments/:id/{reschedule,cancel,arrive,done,no-show}` |
-| `realtime`      | `WS /realtime?token=<accessToken>` (fecha com 4401 se o token for inválido)                                                                        |
-| `health`        | `GET /health`, `GET /v1/health`                                                                                                                    |
-| `whatsapp`      | `POST/DELETE /whatsapp/session`, `GET /whatsapp/{qr,pairing-code,status}`, `POST /webhooks/whatsapp/:instance`                                     |
-| `conversations` | `GET /conversations`, `GET/POST /conversations/:id/messages`, `POST /conversations/:id/handoff`                                                    |
-| `decisions`     | `GET /decisions`, `POST /decisions/:id/answer`, `POST /decisions/:id/take-over`                                                                    |
-| `ai`            | `POST /ai/pause`, `POST /ai/resume`, `PATCH /ai/settings`, `POST /messages/preview`                                                                |
-| `devices`       | `POST /devices`, `DELETE /devices/:id`                                                                                                             |
+| Módulo          | Rotas                                                                                                                                                                   |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `auth`          | `POST /auth/otp/request`, `/auth/otp/verify`, `/auth/refresh`, `GET/PATCH/DELETE /me`                                                                                   |
+| `catalog`       | CRUD `/services` + `POST /services/reorder`, CRUD `/working-hours` + `PUT /working-hours`, CRUD `/time-off`                                                             |
+| `clients`       | CRUD `/clients` (busca, ordem, "sumidos", cursor), `GET /clients/:id/stats`, `GET /clients/:id/appointments`                                                            |
+| `agenda`        | `GET /agenda?date=`, `GET /slots`, `POST /appointments`, `GET /appointments/:id`, `POST /appointments/:id/{reschedule,cancel,confirm,arrive,done,no-show,delay-notice}` |
+| `realtime`      | `WS /realtime?token=<accessToken>` (fecha com 4401 se o token for inválido)                                                                                             |
+| `health`        | `GET /health`, `GET /v1/health`                                                                                                                                         |
+| `whatsapp`      | `POST/DELETE /whatsapp/session`, `GET /whatsapp/{qr,pairing-code,status}`, `POST /webhooks/whatsapp/:instance`                                                          |
+| `conversations` | `GET /conversations`, `GET/POST /conversations/:id/messages`, `POST /conversations/:id/handoff`                                                                         |
+| `decisions`     | `GET /decisions`, `POST /decisions/:id/answer`, `POST /decisions/:id/take-over`                                                                                         |
+| `ai`            | `POST /ai/pause`, `POST /ai/resume`, `PATCH /ai/settings`, `POST /messages/preview`                                                                                     |
+| `devices`       | `POST /devices`, `DELETE /devices/:id`                                                                                                                                  |
+| `waitlist`      | CRUD `/waitlist`, `POST /waitlist/:id/offer`, `PATCH /waitlist/rule`                                                                                                    |
+| `voice`         | `POST /voice/command`, `GET /voice/summary?moment=open\|close`                                                                                                          |
+| `salon`         | `GET /salon/day`, `GET /salon/reports`, CRUD `/salon/team`, `GET /salon/clients` (`format=csv`), `GET /salon/plan`, `POST /kit-leads`                                   |
+| `site`          | `POST /leads` (pública, limite por IP, campo-armadilha `website`)                                                                                                       |
 
 Peças transversais:
 
@@ -124,8 +128,28 @@ BullMQ (`src/lib/queues.ts`) e workers, que rodam no próprio processo da API.
    banco; `waitlistSlotHasOtherActiveOffer` é sempre passado (false salvo outra oferta ativa para a
    mesma vaga). Regra ESLint em `eslint.config.mjs` proíbe `.sendText(`/`.sendPresence(` fora de
    `send.ts` e `gateway.ts`.
-7. **Lista de espera (C1)**: ligar a oferta automática em `app.agenda.onSlotFreed` e enviar com
-   `outbox.enqueue({ purpose: 'waitlist_offer', waitlistSlotStartsAt })`.
+7. **Lembretes** (`modules/agenda/reminders.ts`, fila `reminders`): job `reminder-<id>` em
+   `starts_at - reminder_lead_minutes`, criado/recolocado em `created`/`rescheduled` e removido em
+   qualquer outro estado. Sai com `purpose: 'reminder'` ("Responda 1 para confirmar"); o "1" volta
+   pelo fluxo normal (IA → `confirmar_presenca`, com `confirm_reminders`). A guarda só deixa sair
+   para quem já escreveu ou tem atendimento anterior.
+8. **Lista de espera** (`modules/waitlist/service.ts`, fila `waitlist`): `onSlotFreed` →
+   `offerNext`: entrada `waiting` mais antiga cuja preferência (dias/períodos no fuso) e serviço cabem
+   na vaga e que ainda não recebeu essa vaga; trava `pg_advisory_xact_lock` por vaga (uma oferta
+   ativa por vez). Envio com `purpose: 'waitlist_offer'` + `waitlistSlotStartsAt` (send.ts passa
+   `waitlistSlotHasOtherActiveOffer` calculado de `waitlist_offers`). Expira em
+   `waitlist_rule.waitMinutes` (job `wl-expire-<offerId>`) e passa para a próxima. No `inbound`,
+   "sim"/"não" claros para uma oferta aberta são tratados antes da IA: "sim" marca pelo motor de
+   agenda (conflito revalidado), "não" passa a vaga adiante.
+9. **Exclusão de conta** (`modules/auth/account.ts`): valida (dono com equipe → 409
+   `OWNER_HAS_TEAM`, ou `transferOwnershipTo` / `deleteWholeSalon`), só então consome o código
+   `delete_account`; desconecta e apaga a instância (falha do provedor = 502, nada apagado), remove
+   jobs com dados pessoais do Redis, apaga o profissional (cascata: clientes, agenda, conversas,
+   decisões, lista de espera, auditoria), `otp_codes` e `leads` do telefone, o espaço se ficar vazio,
+   e grava `account_deletions` com HMAC do telefone. Remover alguém da equipe usa o mesmo apagamento.
+10. **Limite por IP** (`@fastify/rate-limit`, contadores no Redis): `POST /leads`
+    (`RATE_LIMIT_LEADS_MAX`/10 min) e cada rota `/auth/otp/*` (`RATE_LIMIT_OTP_MAX`/10 min). Atrás do
+    Caddy, `TRUST_PROXY=true`.
 
 Gateway: Evolution com `EVOLUTION_BASE_URL`+`EVOLUTION_API_KEY`; sem elas, `FakeGateway` fora de
 produção (em produção, as chamadas falham com 502). A conta de revisão (`REVIEW_PHONE`) usa sempre o
@@ -147,6 +171,14 @@ Usam a infraestrutura do Docker: banco `boramarca_test` (recriado do zero a cada
 - `auth/auth.test.ts` — request/verify/refresh, tentativas, expiração, `123456` recusado em produção.
 - `isolation.test.ts` — um profissional não lê nem altera nada de outro (404 em todas as rotas).
 - `api.test.ts` — cadastro, clientes e estatísticas por HTTP, WebSocket e OpenAPI.
+- `growth.test.ts` — lembretes (agendar/remarcar/cancelar/enviar/"1" confirma), lista de espera
+  (ordem, preferência, só quem pediu, expiração, recusa, aceite, regra desligada, oferta manual),
+  as quatro perguntas de voz e os resumos, confirmar, aviso de atraso, histórico do cliente.
+- `account.test.ts` — `DELETE /me`: nenhuma linha de nenhuma tabela contém telefone, nome ou id do
+  profissional e dos clientes; instância removida; dono com equipe (transferir / espaço inteiro).
+- `salon.test.ts` — relatórios com o seed (`seedDemo(db, now)`, `src/db/seed-demo.ts`), dia,
+  equipe, plano, CSV, acesso só do dono. `rate-limit.test.ts` — limites por IP.
+- `routes.test.ts` — falha se alguma rota do contrato (exceto Alexa) não tiver handler.
 - `messaging.test.ts` — ponta a ponta com `FakeGateway`/`FakeLlm`/`FakePush`, filas reais: fluxo do
   PDF (passos 1–7, incluindo o prazo esgotado e a expiração), mensagem duplicada, segredo errado, IA
   pausada, `change_other_client` travado, ids de outro profissional recusados, assumir/devolver

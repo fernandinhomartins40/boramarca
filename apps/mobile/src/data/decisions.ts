@@ -8,7 +8,8 @@ import type {
   Id,
 } from '@boramarca/shared';
 import { applyMockAgendaAction } from './agenda';
-import { clientName, firstName, ids } from './mock/fixtures';
+import { mockConversations } from './conversations';
+import { clientName, firstName, ids, professional } from './mock/fixtures';
 import {
   base,
   fail,
@@ -260,23 +261,30 @@ export const mockDecisionsData: DecisionsData = {
     });
     const who = d.context.clientFirstName;
     const yes = option ? option.id !== 'nao' : true;
+    const sent = yes
+      ? `Olá, ${who}! Seu agendamento foi confirmado. Nos vemos lá!`
+      : `Oi, ${who}! Hoje não consigo, mas te aviso se vagar um horário.`;
     return reply({
       decision: d,
       spokenConfirmation: yes ? `Pronto. Já avisei ${who}.` : 'Tudo bem, não marquei.',
-      clientMessagePreview: yes
-        ? `Olá, ${who}! Seu agendamento foi confirmado. Nos vemos lá!`
-        : `Oi, ${who}! Hoje não consigo, mas te aviso se vagar um horário.`,
+      // same rule as the API: null when "Não mostrar prévia de novo" is on
+      clientMessagePreview: professional.skipMessagePreview ? null : sent,
       appointment,
     });
   },
   async takeOver(id) {
     const d = find(id);
+    if (d.status !== 'pending') fail(409, 'ALREADY_RESOLVED', 'Essa decisão já foi resolvida');
     Object.assign(d, {
       status: 'resolved',
       resolvedVia: 'app',
+      resolvedOption: 'take_over',
       resolvedText: 'Deixa que eu respondo',
       updatedAt: nowIso(),
     });
+    // like the API: the conversation goes to "Com você"
+    const conversation = mockConversations.find((v) => v.id === d.conversationId);
+    if (conversation) conversation.handler = 'human';
     return reply({ decision: d, conversationId: d.conversationId });
   },
 };

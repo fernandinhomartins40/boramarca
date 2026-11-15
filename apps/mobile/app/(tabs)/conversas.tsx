@@ -1,6 +1,5 @@
-import { PlaceholderScreen } from '@/components';
+import { ConversationsScreen } from '@/features/conversations/ConversationsScreen';
 
-// Empty route created by A4; replaced by the screen of Prompt 06.
 export default function ConversasScreen() {
-  return <PlaceholderScreen title="Conversas" spec="Prompt 06" tab />;
+  return <ConversationsScreen />;
 }

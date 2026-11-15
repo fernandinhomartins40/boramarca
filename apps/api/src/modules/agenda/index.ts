@@ -1,5 +1,8 @@
 import type { FastifyPluginAsync, FastifyRequest } from 'fastify';
+import { firstName, renderMessage } from '@boramarca/ia';
 import { routes } from '@boramarca/shared';
+import { loadPro } from '../../lib/core';
+import { AppError } from '../../lib/errors';
 import { route } from '../../lib/route';
 import type { AgendaCtx } from './service';
 
@@ -46,6 +49,41 @@ const agenda: FastifyPluginAsync = async (app) => {
   route(app, a.arrive, async (req) => ag.markArrived(ctx(req), req.params.id));
   route(app, a.done, async (req) => ag.markDone(ctx(req), req.params.id));
   route(app, a.noShow, async (req) => ag.markNoShow(ctx(req), req.params.id));
+  route(app, a.confirm, async (req) => ag.confirm(ctx(req), req.params.id));
+
+  // "Estou atrasado": message to the client through the send guard + history entry.
+  route(app, a.delayNotice, async (req) => {
+    const pid = req.scope.professionalId;
+    const appt = await ag.getAppointment(pid, req.params.id);
+    if (!['scheduled', 'confirmed'].includes(appt.status))
+      throw new AppError(409, 'INVALID_STATUS', 'Esse agendamento não está mais ativo');
+    const pro = await loadPro(app.db, pid);
+    const { delayMinutes } = req.body;
+    const text =
+      req.body.messageText ??
+      renderMessage('delay_notice', pro.p.aiTone, {
+        now: app.now().toISOString(),
+        timezone: pro.salon.timezone,
+        clientFirstName: firstName(appt.clientName),
+        startsAt: appt.startsAt,
+        delayMinutes,
+      });
+    const m = await app.messaging.outbox.enqueue({
+      professionalId: pid,
+      clientId: appt.clientId,
+      text,
+      purpose: 'notice',
+      author: 'professional',
+    });
+    if (!m) throw new AppError(409, 'NO_SESSION', 'Conecte o WhatsApp primeiro');
+    await ag.addEvent(
+      ctx(req),
+      appt.id,
+      'delay_notice_sent',
+      `Você avisou atraso de ${delayMinutes} min`,
+    );
+    return { ok: true as const, sentText: text };
+  });
 };
 
 export default agenda;

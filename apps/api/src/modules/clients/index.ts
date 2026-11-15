@@ -18,16 +18,16 @@ const uniquePhone = async <T>(fn: () => Promise<T>) => {
 
 // Per-client aggregates over appointments ("done" counts as a visit). Plain SQL with aliases:
 // drizzle leaves columns unqualified in single-table selects, which would be ambiguous here.
-const visitsCount = sql<number>`(select count(*)::int from appointments a where a.client_id = clients.id and a.status = 'done')`;
-const noShowCount = sql<number>`(select count(*)::int from appointments a where a.client_id = clients.id and a.status = 'no_show')`;
-const lastVisitAt =
+export const visitsCount = sql<number>`(select count(*)::int from appointments a where a.client_id = clients.id and a.status = 'done')`;
+export const noShowCount = sql<number>`(select count(*)::int from appointments a where a.client_id = clients.id and a.status = 'no_show')`;
+export const lastVisitAt =
   sql<Date | null>`(select max(a.starts_at) from appointments a where a.client_id = clients.id and a.status = 'done')`.mapWith(
     appointments.startsAt,
   );
-const lastServiceName = sql<
+export const lastServiceName = sql<
   string | null
 >`(select s.name from appointment_services s join appointments a on a.id = s.appointment_id where a.client_id = clients.id and a.status = 'done' order by a.starts_at desc, s.created_at limit 1)`;
-const onWaitlist = sql<boolean>`exists(select 1 from waitlist_entries w where w.client_id = clients.id and w.status in ('waiting', 'offered'))`;
+export const onWaitlist = sql<boolean>`exists(select 1 from waitlist_entries w where w.client_id = clients.id and w.status in ('waiting', 'offered'))`;
 
 /** CRUD /clients + GET /clients/:id/stats, always scoped to the authenticated professional. */
 const clientsModule: FastifyPluginAsync = async (app) => {
@@ -120,6 +120,10 @@ const clientsModule: FastifyPluginAsync = async (app) => {
     if (!row) throw notFound('Cliente');
     return { ok: true as const };
   });
+
+  route(app, c.appointments, async (req) => ({
+    items: await app.agenda.clientAppointments(req.scope.professionalId, req.params.id),
+  }));
 
   route(app, c.stats, async (req) => {
     const id = req.params.id;

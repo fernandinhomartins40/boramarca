@@ -1,7 +1,60 @@
 @import 'tailwindcss';
 @import './theme.css';
 
+/* Hero title scale from Bora-Marca-Kit/guia-html-css.md (.hero h1). */
+@theme {
+  --text-hero: clamp(2rem, 4vw, 4rem);
+  --text-hero--line-height: 1.04;
+  --text-hero--font-weight: 700;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
 body {
   background-color: var(--color-bg);
   color: var(--color-text);
+}
+
+/* Long-form text on /privacidade and /termos. */
+.legal h2 {
+  margin-top: var(--spacing-xxl);
+  font-size: var(--text-title);
+  line-height: var(--text-title--line-height);
+  font-weight: 700;
+}
+.legal h3 {
+  margin-top: var(--spacing-xl);
+  font-size: var(--text-heading);
+  line-height: var(--text-heading--line-height);
+  font-weight: 600;
+}
+.legal p,
+.legal ul {
+  margin-top: var(--spacing-md);
+  font-size: var(--text-body);
+  line-height: var(--text-body--line-height);
+}
+.legal ul {
+  list-style: disc;
+  padding-left: var(--spacing-xl);
+}
+.legal li + li {
+  margin-top: var(--spacing-xs);
+}
+.legal a {
+  color: var(--color-primary-text);
+  text-decoration: underline;
 }

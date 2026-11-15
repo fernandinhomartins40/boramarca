@@ -1,0 +1,91 @@
+{
+  "interactionModel": {
+    "languageModel": {
+      "invocationName": "bora marca",
+      "intents": [
+        {
+          "name": "ClientesRestantesIntent",
+          "slots": [],
+          "samples": [
+            "quantos clientes ainda tenho hoje",
+            "quantos clientes eu ainda tenho",
+            "quantos clientes faltam",
+            "quantos clientes faltam hoje",
+            "quantos atendimentos faltam",
+            "quantos atendimentos ainda tenho hoje",
+            "quantas pessoas ainda faltam",
+            "quanta gente ainda falta hoje"
+          ]
+        },
+        {
+          "name": "HorariosVagosIntent",
+          "slots": [],
+          "samples": [
+            "tem horário vago",
+            "tem horário vago hoje",
+            "tem algum horário livre",
+            "quais horários estão livres",
+            "quais horários estão vagos",
+            "tenho horário livre hoje",
+            "sobrou algum horário"
+          ]
+        },
+        {
+          "name": "ProximoClienteIntent",
+          "slots": [],
+          "samples": [
+            "quem é o próximo",
+            "quem é a próxima",
+            "quem é o próximo cliente",
+            "quem vem agora",
+            "qual é o próximo atendimento",
+            "quem vem depois"
+          ]
+        },
+        {
+          "name": "NovasMensagensIntent",
+          "slots": [],
+          "samples": [
+            "alguém mandou mensagem",
+            "tem mensagem nova",
+            "tem mensagem",
+            "chegou mensagem",
+            "alguém me escreveu",
+            "tem alguma mensagem nova"
+          ]
+        },
+        {
+          "name": "ResponderDecisaoIntent",
+          "slots": [{ "name": "resposta", "type": "AMAZON.SearchQuery" }],
+          "samples": [
+            "que {resposta}",
+            "responde que {resposta}",
+            "responda que {resposta}",
+            "a resposta é {resposta}",
+            "minha resposta é {resposta}",
+            "pode responder {resposta}"
+          ]
+        },
+        {
+          "name": "ResponderSimIntent",
+          "slots": [{ "name": "complemento", "type": "AMAZON.SearchQuery" }],
+          "samples": [
+            "sim {complemento}",
+            "que sim {complemento}",
+            "pode sim {complemento}",
+            "pode marcar {complemento}",
+            "pode encaixar {complemento}"
+          ]
+        },
+        { "name": "AMAZON.YesIntent", "samples": ["pode", "pode sim", "confirma", "beleza"] },
+        { "name": "AMAZON.NoIntent", "samples": ["não pode", "agora não"] },
+        { "name": "AMAZON.HelpIntent", "samples": [] },
+        { "name": "AMAZON.CancelIntent", "samples": [] },
+        { "name": "AMAZON.StopIntent", "samples": [] },
+        { "name": "AMAZON.NavigateHomeIntent", "samples": [] },
+        { "name": "AMAZON.FallbackIntent", "samples": [] }
+      ],
+      "types": []
+    }
+  }
+}

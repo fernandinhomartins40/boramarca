@@ -1,6 +1,8 @@
-import { PlaceholderScreen } from '@/components';
+import { useLocalSearchParams } from 'expo-router';
+import { DecisionsScreen } from '@/features/decisions/DecisionsScreen';
 
-// Empty route created by A4; replaced by the screen of Prompt 05.
+// `decisionId` comes from a tapped notification (src/features/notifications).
 export default function DecisoesScreen() {
-  return <PlaceholderScreen title="Decisões" spec="Prompt 05" tab />;
+  const { decisionId } = useLocalSearchParams<{ decisionId?: string }>();
+  return <DecisionsScreen decisionId={decisionId} />;
 }

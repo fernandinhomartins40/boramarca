@@ -1,3 +1,3 @@
-// Conversas do WhatsApp (prompt 06).
-// Owner: agent C2. Empty on purpose: created by A4 so every feature has its folder.
-export {};
+// Conversas do WhatsApp (prompt 06). Owner: agent C2.
+export * from './format';
+export { useDictation } from './useDictation';

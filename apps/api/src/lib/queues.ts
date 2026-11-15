@@ -1,9 +1,10 @@
-// BullMQ queues of plan section 5: `inbound` (webhook -> AI), `outbound` (send guard) and
-// `decisions` (deadline and expiry jobs). Workers run inside the API process.
+// BullMQ queues of plan sections 5 and 8: `inbound` (webhook -> AI), `outbound` (send guard),
+// `decisions` (deadline and expiry jobs), `reminders` (one delayed job per appointment) and
+// `waitlist` (offer expiry). Workers run inside the API process.
 import { DelayedError, Queue, Worker, type Job } from 'bullmq';
 import { Redis } from 'ioredis';
 
-export const QUEUE_NAMES = ['inbound', 'outbound', 'decisions'] as const;
+export const QUEUE_NAMES = ['inbound', 'outbound', 'decisions', 'reminders', 'waitlist'] as const;
 export type QueueName = (typeof QUEUE_NAMES)[number];
 
 export type Processor = (job: Job, token?: string) => Promise<unknown>;

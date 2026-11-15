@@ -22,7 +22,7 @@ export function route<C extends RouteContract>(
   app: FastifyInstance,
   c: C,
   handler: (req: RouteRequest<C>, reply: FastifyReply) => Promise<z.output<C['response']>>,
-  extra: { bodyLimit?: number } = {},
+  extra: { bodyLimit?: number; config?: Record<string, unknown> } = {},
 ) {
   app.route({
     ...extra,

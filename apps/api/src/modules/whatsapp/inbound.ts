@@ -21,6 +21,7 @@ import { todayIn } from '../../lib/time';
 import type { ToolRunner } from '../ai/tools';
 import { publishMessage } from '../conversations/views';
 import type { Notify } from '../devices/notify';
+import type { Waitlist } from '../waitlist/service';
 import { hadPastAppointment } from './send';
 
 export interface InboundJob {
@@ -51,7 +52,10 @@ export function statusResponse(
   };
 }
 
-export function createInbound(core: Core, deps: { tools: ToolRunner; notify: Notify }) {
+export function createInbound(
+  core: Core,
+  deps: { tools: ToolRunner; notify: Notify; waitlist: Waitlist },
+) {
   const { db, bus, queues, gateway } = core;
 
   async function storeMessage(session: SessionRow, e: InboundMessageEvent) {
@@ -232,6 +236,12 @@ export function createInbound(core: Core, deps: { tools: ToolRunner; notify: Not
     }
     const text = (m.text ?? m.transcription ?? '').trim();
     if (!text) return notifyApp('empty');
+
+    // A clear "sim"/"não" to an open waitlist offer is settled by the waitlist itself.
+    if (await deps.waitlist.handleClientReply(pid, row.client.id, text)) {
+      await audit(db, pid, 'system', 'waitlist.reply_handled', { messageId: m.id });
+      return { status: 'waitlist' };
+    }
 
     // Step 5: AI off, paused, or the professional took over.
     const now = core.now();

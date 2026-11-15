@@ -1,6 +1,7 @@
-import { PlaceholderScreen } from '@/components';
+import { useLocalSearchParams } from 'expo-router';
+import { ConversationScreen } from '@/features/conversations/ConversationScreen';
 
-// Empty route created by A4; replaced by the screen of Prompt 06.
-export default function IdScreen() {
-  return <PlaceholderScreen title="Conversa" spec="Prompt 06" back />;
+export default function ConversaScreen() {
+  const { id } = useLocalSearchParams<{ id: string }>();
+  return <ConversationScreen id={id} />;
 }

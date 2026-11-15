@@ -37,6 +37,7 @@ import {
   showToast,
 } from '@/components';
 import { data } from '@/data';
+import { useBalcaoStore } from '@/features/balcao/store';
 import { handleDecisionAction } from '@/features/decisions';
 import { useTheme } from '@/theme';
 import {
@@ -103,6 +104,7 @@ export function AgendaScreen() {
   const yesNo = decisions.data?.items.filter((d) => d.options.length === 2) ?? [];
   const decision = yesNo.find((d) => d.type === 'encaixe') ?? yesNo[0];
   const pendingCount = decisions.data?.items.length ?? 0;
+  const balcaoActive = useBalcaoStore((s) => s.active);
   const booked = day.data?.appointments.filter((a) => a.status !== 'cancelled') ?? [];
 
   // scroll to the "agora" line once per day shown
@@ -201,7 +203,7 @@ export function AgendaScreen() {
             onPress={() => setDate(shiftDate(date, 1))}
           />
         </View>
-        <BalcaoStatus active={false} onPress={() => router.push('/balcao')} />
+        <BalcaoStatus active={balcaoActive} onPress={() => router.push('/balcao')} />
 
         {day.loading ? (
           <View accessibilityLabel="Carregando a agenda" style={{ gap: t.spacing.md }}>

@@ -1,0 +1,48 @@
+{
+  "manifest": {
+    "manifestVersion": "1.0",
+    "publishingInformation": {
+      "locales": {
+        "pt-BR": {
+          "name": "Bora Marca",
+          "summary": "Sua agenda de hora marcada por voz: quem é o próximo, horários vagos e respostas para a IA.",
+          "description": "Para profissionais que usam o Bora Marca. Pergunte quantos clientes ainda faltam, se tem horário vago, quem é o próximo e se alguém mandou mensagem. Quando a IA do Bora Marca precisar da sua decisão, responda pela Alexa: \"diga ao Bora Marca que sim, para daqui 15 minutos\". Exige conta no Bora Marca, vinculada no app Alexa.",
+          "examplePhrases": [
+            "Alexa, abra o Bora Marca",
+            "Alexa, pergunte ao Bora Marca quem é o próximo",
+            "Alexa, diga ao Bora Marca que sim"
+          ],
+          "keywords": ["agenda", "hora marcada", "clientes", "horários", "bora marca"],
+          "smallIconUri": "https://boramarca.com.br/alexa/icone-108.png",
+          "largeIconUri": "https://boramarca.com.br/alexa/icone-512.png"
+        }
+      },
+      "isAvailableWorldwide": false,
+      "distributionCountries": ["BR"],
+      "distributionMode": "PUBLIC",
+      "category": "CALENDARS_AND_REMINDERS",
+      "testingInstructions": "Vincule a conta de demonstração (telefone e código enviados nas notas de certificação). Depois: \"Alexa, abra o Bora Marca\", \"Alexa, pergunte ao Bora Marca quantos clientes faltam\" e, com uma decisão pendente criada pela conta de demonstração, \"Alexa, diga ao Bora Marca que sim\"."
+    },
+    "apis": {
+      "custom": {
+        "endpoint": {
+          "uri": "https://api.boramarca.com.br/v1/alexa/skill",
+          "sslCertificateType": "Trusted"
+        }
+      }
+    },
+    "privacyAndCompliance": {
+      "allowsPurchases": false,
+      "usesPersonalInfo": true,
+      "isChildDirected": false,
+      "isExportCompliant": true,
+      "containsAds": false,
+      "locales": {
+        "pt-BR": {
+          "privacyPolicyUrl": "https://boramarca.com.br/privacidade",
+          "termsOfUseUrl": "https://boramarca.com.br/termos"
+        }
+      }
+    }
+  }
+}

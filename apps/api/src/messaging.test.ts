@@ -5,7 +5,6 @@ import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
 import { FakeLlm, FakeTranscriber, toolReply } from '@boramarca/ia';
 import { WHATSAPP_WEBHOOK_SECRET_HEADER, type RealtimeEvent } from '@boramarca/shared';
-import { FakeGateway } from '@boramarca/whatsapp';
 import { buildApp } from './app';
 import {
   aiDecisions,
@@ -18,7 +17,7 @@ import {
 } from './db/schema';
 import { zonedToUtc } from './lib/time';
 import { FakePush } from './modules/devices/push';
-import { randomPhone, seedProfessional, testConfig } from './test/helpers';
+import { randomPhone, seedProfessional, testConfig, testGateway } from './test/helpers';
 
 // Real queues and workers: under a loaded machine a full flow can take a while.
 vi.setConfig({ testTimeout: 180_000 });
@@ -29,14 +28,14 @@ const at = (hhmm: string) => zonedToUtc(DATE, hhmm, TZ).toISOString();
 const SECRET = 'test-webhook-secret-0123456789';
 
 let now = new Date(at('14:00'));
-const gw = new FakeGateway();
+const gw = testGateway();
 const llm = new FakeLlm();
 const push = new FakePush();
 let app: Awaited<ReturnType<typeof buildApp>>;
 
 async function waitFor<T>(
   fn: () => Promise<T | null | undefined | false> | T | null | undefined | false,
-  ms = 60_000,
+  ms = 150_000, // generous: the whole suite shares one slow machine
 ): Promise<T> {
   const end = Date.now() + ms;
   for (;;) {

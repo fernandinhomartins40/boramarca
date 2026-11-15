@@ -6,6 +6,7 @@ import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { ToastHost } from '@/components/Toast';
 import { useAuthGuard, useSession } from '@/features/auth';
+import { useDecisionNotifications } from '@/features/notifications';
 import { GlobalBanners } from '@/features/settings';
 import { useTheme } from '@/theme';
 import { interFonts } from '@/theme/fonts';
@@ -20,6 +21,7 @@ export default function RootLayout() {
   // on font error, fall back to the system font instead of hanging; wait for the stored session
   const ready = (loaded || !!error) && hydrated;
   useAuthGuard();
+  useDecisionNotifications();
 
   useEffect(() => {
     if (ready) SplashScreen.hideAsync().catch(() => undefined);

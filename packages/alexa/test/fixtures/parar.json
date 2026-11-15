@@ -1,0 +1,43 @@
+{
+  "version": "1.0",
+  "session": {
+    "new": true,
+    "sessionId": "amzn1.echo-api.session.0000-test",
+    "application": {
+      "applicationId": "amzn1.ask.skill.00000000-0000-4000-8000-000000000001"
+    },
+    "user": {
+      "userId": "amzn1.ask.account.AMXTESTUSER",
+      "accessToken": "atk-linked-pro-1"
+    }
+  },
+  "context": {
+    "System": {
+      "application": {
+        "applicationId": "amzn1.ask.skill.00000000-0000-4000-8000-000000000001"
+      },
+      "user": {
+        "userId": "amzn1.ask.account.AMXTESTUSER",
+        "accessToken": "atk-linked-pro-1"
+      },
+      "device": {
+        "deviceId": "amzn1.ask.device.AMXTESTDEVICE",
+        "supportedInterfaces": {}
+      },
+      "apiEndpoint": "https://api.amazonalexa.com",
+      "apiAccessToken": "eyJ0eXAiOiJKV1Qi.test.sig"
+    }
+  },
+  "request": {
+    "type": "IntentRequest",
+    "requestId": "amzn1.echo-api.request.0000-test",
+    "locale": "pt-BR",
+    "timestamp": "2026-11-14T13:00:00Z",
+    "dialogState": "COMPLETED",
+    "intent": {
+      "name": "AMAZON.StopIntent",
+      "confirmationStatus": "NONE",
+      "slots": {}
+    }
+  }
+}

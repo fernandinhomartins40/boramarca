@@ -430,6 +430,37 @@ export function createAgenda(deps: AgendaDeps) {
     return { ...v, client: wire(client!), events: events.map(wire) };
   }
 
+  /** GET /clients/:id/appointments: the client's history, newest first. */
+  async function clientAppointments(professionalId: string, clientId: string) {
+    const [c] = await db
+      .select({ id: clients.id })
+      .from(clients)
+      .where(and(eq(clients.id, clientId), eq(clients.professionalId, professionalId)));
+    if (!c) throw notFound('Cliente');
+    const ids = await db
+      .select({ id: appointments.id })
+      .from(appointments)
+      .where(
+        and(eq(appointments.professionalId, professionalId), eq(appointments.clientId, clientId)),
+      );
+    const list = await views(
+      db,
+      professionalId,
+      ids.map((r) => r.id),
+    );
+    return list.reverse();
+  }
+
+  /** Short history entry written by other modules (reminder, delay notice). */
+  async function addEvent(
+    ctx: AgendaCtx,
+    appointmentId: string,
+    type: AppointmentEventType,
+    description: string,
+  ) {
+    await record(db, ctx, appointmentId, type, description);
+  }
+
   // ---------------------------------------------------------------- writes
 
   /** Books a client (existing `clientId` or `newClient`) at `startsAt` for the given services. */
@@ -672,6 +703,8 @@ export function createAgenda(deps: AgendaDeps) {
     servicesDuration,
     getDay,
     getAppointment,
+    clientAppointments,
+    addEvent,
     book,
     reschedule,
     cancel,

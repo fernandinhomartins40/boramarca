@@ -15,6 +15,7 @@ import { firstName, renderMessage } from '@boramarca/ia';
 import { audit } from '../lib/audit';
 import { loadPro, type Core } from '../lib/core';
 import { createQueues } from '../lib/queues';
+import { createReminders } from '../modules/agenda/reminders';
 import { createToolRunner } from '../modules/ai/tools';
 import { createDecisions } from '../modules/decisions/service';
 import { createNotifier } from '../modules/devices/notify';
@@ -26,6 +27,7 @@ import {
 } from '../modules/whatsapp/gateway';
 import { createInbound } from '../modules/whatsapp/inbound';
 import { createOutbox } from '../modules/whatsapp/send';
+import { createWaitlist } from '../modules/waitlist/service';
 
 export interface MessagingOverrides {
   gateway?: WhatsAppGateway;
@@ -59,8 +61,10 @@ function buildMessaging(core: Core) {
   const outbox = createOutbox(core);
   const decisions = createDecisions(core, { outbox, notify });
   const tools = createToolRunner(core, { outbox, decisions, notify });
-  const inbound = createInbound(core, { tools, notify });
-  return { notify, outbox, decisions, tools, inbound };
+  const reminders = createReminders(core, { outbox });
+  const waitlist = createWaitlist(core, { outbox });
+  const inbound = createInbound(core, { tools, notify, waitlist });
+  return { notify, outbox, decisions, tools, inbound, reminders, waitlist };
 }
 export type Messaging = ReturnType<typeof buildMessaging> & {
   gateway: WhatsAppGateway;
@@ -132,6 +136,8 @@ export default fp<{ overrides?: MessagingOverrides }>(async (app, { overrides = 
   // Per-instance lock inside: one send per WhatsApp instance at a time.
   queues.startWorker('outbound', (j, t) => m.outbox.process(j, t), 8, onError);
   queues.startWorker('decisions', (j) => m.decisions.process(j), 4, onError);
+  queues.startWorker('reminders', (j) => m.reminders.process(j), 4, onError);
+  queues.startWorker('waitlist', (j) => m.waitlist.process(j), 2, onError);
 
   // "Avisar o cliente" from the app (create/reschedule/cancel) goes out through the guard;
   // a new booking makes Decisions proposing that time expire.
@@ -170,9 +176,19 @@ export default fp<{ overrides?: MessagingOverrides }>(async (app, { overrides = 
       change: e.change,
     });
   });
-  // Waitlist (C1): plug the automatic offer into app.agenda.onSlotFreed and send it with
-  // outbox.enqueue({ purpose: 'waitlist_offer', waitlistSlotStartsAt }) — the send guard then
-  // receives waitlistSlotHasOtherActiveOffer computed from waitlist_offers.
+  // Reminders follow the appointment: scheduled on create/reschedule, removed otherwise.
+  app.agenda.onAppointmentChanged((e) => m.reminders.onAppointmentChanged(e));
+  // A freed slot goes to the waitlist, one person at a time (offers leave through the guard with
+  // purpose 'waitlist_offer'; send.ts passes waitlistSlotHasOtherActiveOffer from waitlist_offers).
+  app.agenda.onSlotFreed(async (e) => {
+    if (e.offerToWaitlist)
+      await m.waitlist.offerNext({
+        professionalId: e.professionalId,
+        startsAt: e.startsAt,
+        endsAt: e.endsAt,
+        serviceIds: e.serviceIds,
+      });
+  });
 
   app.addHook('onClose', async () => {
     await queues.close();

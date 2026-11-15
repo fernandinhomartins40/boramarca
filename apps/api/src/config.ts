@@ -52,6 +52,14 @@ const Env = z.object({
   EXPO_ACCESS_TOKEN: z.string().optional(),
   /** Minutes the professional has to answer a Decision before the neutral reply goes out. */
   DECISION_DEADLINE_MINUTES: z.coerce.number().int().min(1).max(240).optional(),
+  /** Behind a reverse proxy (Caddy): trust X-Forwarded-For so per-IP limits see the real client. */
+  TRUST_PROXY: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((v) => v === 'true'),
+  /** Per-IP limits, per 10 minutes: public site form (POST /leads) and each /auth/otp/* route. */
+  RATE_LIMIT_LEADS_MAX: z.coerce.number().int().min(1).default(5),
+  RATE_LIMIT_OTP_MAX: z.coerce.number().int().min(1).default(30),
 });
 
 export type Config = z.infer<typeof Env>;

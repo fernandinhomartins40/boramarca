@@ -27,6 +27,21 @@ describe('app', () => {
       expect(HealthResponse.parse(res.json()).status).toBe('ok');
     },
   );
+
+  it.each(['DELETE', 'PATCH', 'PUT'])(
+    'CORS preflight allows %s from a configured origin',
+    async (m) => {
+      const origin = config.CORS_ORIGINS[0]!;
+      const res = await app.inject({
+        method: 'OPTIONS',
+        url: '/v1/me',
+        headers: { origin, 'access-control-request-method': m },
+      });
+      expect(res.statusCode).toBe(204);
+      expect(res.headers['access-control-allow-origin']).toBe(origin);
+      expect(String(res.headers['access-control-allow-methods'])).toContain(m);
+    },
+  );
 });
 
 describe('config', () => {

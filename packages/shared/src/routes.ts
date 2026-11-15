@@ -15,10 +15,12 @@ import {
   AgendaResponse,
   AppointmentActionResponse,
   AppointmentCancel,
+  AppointmentConfirmResponse,
   AppointmentCreate,
   AppointmentDetail,
   AppointmentReschedule,
   DelayNoticeBody,
+  ClientAppointmentsResponse,
   DelayNoticeResponse,
   SlotsQuery,
   SlotsResponse,
@@ -276,6 +278,13 @@ export const routes = {
       params: IdParams,
       response: ClientStats,
     }),
+    appointments: r({
+      method: 'GET',
+      path: '/clients/:id/appointments',
+      auth: 'jwt',
+      params: IdParams,
+      response: ClientAppointmentsResponse,
+    }),
   },
   agenda: {
     day: r({
@@ -321,6 +330,13 @@ export const routes = {
       params: IdParams,
       body: AppointmentCancel,
       response: AppointmentActionResponse,
+    }),
+    confirm: r({
+      method: 'POST',
+      path: '/appointments/:id/confirm',
+      auth: 'jwt',
+      params: IdParams,
+      response: AppointmentConfirmResponse,
     }),
     arrive: r({
       method: 'POST',

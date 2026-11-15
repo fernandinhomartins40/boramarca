@@ -1,7 +1,9 @@
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import autoload from '@fastify/autoload';
+import { randomBytes } from 'node:crypto';
 import cors from '@fastify/cors';
+import rateLimit from '@fastify/rate-limit';
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
 import websocket from '@fastify/websocket';
@@ -13,7 +15,7 @@ import {
 } from 'fastify-type-provider-zod';
 import { API_PREFIX } from '@boramarca/shared';
 import type { Config } from './config';
-import { registerErrorHandler } from './lib/errors';
+import { AppError, registerErrorHandler } from './lib/errors';
 import auth from './plugins/auth';
 import type { OtpSender } from './modules/auth/otp';
 import infra from './plugins/infra';
@@ -31,6 +33,7 @@ export interface AppOverrides extends MessagingOverrides {
 export async function buildApp(config: Config, overrides: AppOverrides = {}) {
   const app = Fastify({
     logger: config.LOG_LEVEL === 'silent' ? false : { level: config.LOG_LEVEL },
+    trustProxy: config.TRUST_PROXY,
   });
 
   // Zod schemas from @boramarca/shared validate input, serialize output and feed OpenAPI.
@@ -38,9 +41,25 @@ export async function buildApp(config: Config, overrides: AppOverrides = {}) {
   app.setSerializerCompiler(serializerCompiler);
   registerErrorHandler(app);
 
-  await app.register(cors, { origin: config.CORS_ORIGINS });
+  // @fastify/cors 11 allows only GET,HEAD,POST by default: the panel and site use PATCH/PUT/DELETE.
+  await app.register(cors, {
+    origin: config.CORS_ORIGINS,
+    methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE'],
+  });
   await app.register(infra, { config, now: overrides.now });
   await app.register(auth, { otpSender: overrides.otpSender });
+  // Per-IP limits only on routes that ask for them (config.rateLimit); counters live in Redis so
+  // every API instance shares them. Tests get their own namespace per app.
+  await app.register(rateLimit, {
+    global: false,
+    redis: app.redis,
+    nameSpace: `bm-rl:${config.NODE_ENV === 'test' ? randomBytes(4).toString('hex') : 'v1'}:`,
+    skipOnError: true,
+    errorResponseBuilder: (_req, ctx) =>
+      new AppError(429, 'RATE_LIMITED', 'Muitas tentativas. Espere um pouco e tente de novo.', {
+        retryAfterSeconds: Math.ceil(ctx.ttl / 1000),
+      }),
+  });
   await app.register(messaging, { overrides });
   await app.register(websocket);
   await app.register(swagger, {

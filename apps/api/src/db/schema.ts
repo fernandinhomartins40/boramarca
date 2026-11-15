@@ -383,10 +383,17 @@ export const waitlistOffers = pgTable(
       .notNull()
       .references(() => waitlistEntries.id, { onDelete: 'cascade' }),
     slotStartsAt: ts('slot_starts_at').notNull(),
+    /** End of the freed interval (the next person is offered the same slot). */
+    slotEndsAt: ts('slot_ends_at').notNull(),
+    /** Services booked when the client accepts. */
+    serviceIds: uuid('service_ids').array().notNull().default([]),
     expiresAt: ts('expires_at').notNull(),
     status: waitlistOfferStatusEnum('status').notNull().default('sent'),
   },
-  (t) => [index('waitlist_offers_entry_idx').on(t.entryId)],
+  (t) => [
+    index('waitlist_offers_entry_idx').on(t.entryId),
+    index('waitlist_offers_slot_idx').on(t.slotStartsAt, t.status),
+  ],
 );
 
 export const auditLog = pgTable(
