@@ -1,0 +1,13 @@
+{
+  "event": "connection.update",
+  "instance": "a2-capture-test",
+  "data": {
+    "instance": "a2-capture-test",
+    "state": "close",
+    "statusReason": 401
+  },
+  "destination": "http://host.docker.internal:3999/webhook",
+  "date_time": "2026-11-12T23:24:31.327Z",
+  "server_url": "http://localhost:8085",
+  "apikey": "00000000-0000-0000-0000-000000000000"
+}

@@ -1,0 +1,78 @@
+{
+  "event": "messages.upsert",
+  "instance": "bm-demo-prof",
+  "data": {
+    "key": {
+      "remoteJid": "5511987654321@s.whatsapp.net",
+      "fromMe": false,
+      "id": "3EB0IMG0000000000001",
+      "participant": "",
+      "addressingMode": "pn"
+    },
+    "pushName": "Fulano",
+    "status": "DELIVERY_ACK",
+    "message": {
+      "imageMessage": {
+        "url": "https://mmg.whatsapp.net/o1/v/t62.7118-24/f1/m231/abc.enc",
+        "mimetype": "image/jpeg",
+        "caption": "Esse corte aqui",
+        "fileSha256": {
+          "0": 12,
+          "1": 201,
+          "2": 77,
+          "3": 5
+        },
+        "fileLength": "48211",
+        "height": 1280,
+        "width": 960,
+        "mediaKey": {
+          "0": 12,
+          "1": 201,
+          "2": 77,
+          "3": 5
+        },
+        "jpegThumbnail": {
+          "0": 12,
+          "1": 201,
+          "2": 77,
+          "3": 5
+        }
+      },
+      "messageContextInfo": {
+        "deviceListMetadata": {
+          "senderKeyHash": {
+            "0": 12,
+            "1": 201,
+            "2": 77,
+            "3": 5
+          },
+          "senderTimestamp": "1762900000",
+          "recipientKeyHash": {
+            "0": 12,
+            "1": 201,
+            "2": 77,
+            "3": 5
+          },
+          "recipientTimestamp": "1762950000"
+        },
+        "deviceListMetadataVersion": 2,
+        "messageSecret": {
+          "0": 12,
+          "1": 201,
+          "2": 77,
+          "3": 5
+        }
+      }
+    },
+    "contextInfo": null,
+    "messageType": "imageMessage",
+    "messageTimestamp": 1762956312,
+    "instanceId": "5f41aa6d-1d33-445b-a520-e949f7e1cb65",
+    "source": "android"
+  },
+  "destination": "http://host.docker.internal:3333/v1/webhooks/whatsapp/bm-demo-prof",
+  "date_time": "2026-11-12T14:05:12.345Z",
+  "sender": "5511900000001@s.whatsapp.net",
+  "server_url": "http://localhost:8085",
+  "apikey": "00000000-0000-0000-0000-000000000000"
+}

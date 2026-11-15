@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@boramarca/shared": "workspace:*",
-    "openai": "^7.56.0"
+    "openai": "^7.56.0",
+    "zod": "^4.6.7"
   }
 }

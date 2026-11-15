@@ -1,0 +1,86 @@
+{
+  "event": "messages.upsert",
+  "instance": "bm-demo-prof",
+  "data": {
+    "key": {
+      "remoteJid": "5511987654321@s.whatsapp.net",
+      "fromMe": false,
+      "id": "3EB0F9E8D7C6B5A40321",
+      "participant": "",
+      "addressingMode": "pn"
+    },
+    "pushName": "Fulano",
+    "status": "DELIVERY_ACK",
+    "message": {
+      "audioMessage": {
+        "url": "https://mmg.whatsapp.net/v/t62.7117-24/12345678_1234567890_n.enc?ccb=11-4&oh=01_x&oe=6950A1B2&_nc_sid=5e03e0&mms3=true",
+        "mimetype": "audio/ogg; codecs=opus",
+        "fileSha256": {
+          "0": 12,
+          "1": 201,
+          "2": 77,
+          "3": 5
+        },
+        "fileLength": "9421",
+        "seconds": 4,
+        "ptt": true,
+        "mediaKey": {
+          "0": 12,
+          "1": 201,
+          "2": 77,
+          "3": 5
+        },
+        "fileEncSha256": {
+          "0": 12,
+          "1": 201,
+          "2": 77,
+          "3": 5
+        },
+        "directPath": "/v/t62.7117-24/12345678_1234567890_n.enc?ccb=11-4&oh=01_x&oe=6950A1B2&_nc_sid=5e03e0",
+        "mediaKeyTimestamp": "1762956300",
+        "waveform": {
+          "0": 12,
+          "1": 201,
+          "2": 77,
+          "3": 5
+        }
+      },
+      "messageContextInfo": {
+        "deviceListMetadata": {
+          "senderKeyHash": {
+            "0": 12,
+            "1": 201,
+            "2": 77,
+            "3": 5
+          },
+          "senderTimestamp": "1762900000",
+          "recipientKeyHash": {
+            "0": 12,
+            "1": 201,
+            "2": 77,
+            "3": 5
+          },
+          "recipientTimestamp": "1762950000"
+        },
+        "deviceListMetadataVersion": 2,
+        "messageSecret": {
+          "0": 12,
+          "1": 201,
+          "2": 77,
+          "3": 5
+        }
+      },
+      "base64": "T2dnUwACAAAAAAAAAAB4Vw4AAAAAAJ1sc1wBE09wdXNIZWFkAQE4AYC7AAAAAAA="
+    },
+    "contextInfo": null,
+    "messageType": "audioMessage",
+    "messageTimestamp": 1762956312,
+    "instanceId": "5f41aa6d-1d33-445b-a520-e949f7e1cb65",
+    "source": "android"
+  },
+  "destination": "http://host.docker.internal:3333/v1/webhooks/whatsapp/bm-demo-prof",
+  "date_time": "2026-11-12T14:05:12.345Z",
+  "sender": "5511900000001@s.whatsapp.net",
+  "server_url": "http://localhost:8085",
+  "apikey": "00000000-0000-0000-0000-000000000000"
+}

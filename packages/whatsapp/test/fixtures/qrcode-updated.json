@@ -1,0 +1,16 @@
+{
+  "event": "qrcode.updated",
+  "instance": "a2-capture-test",
+  "data": {
+    "qrcode": {
+      "instance": "a2-capture-test",
+      "pairingCode": null,
+      "code": "2@a84rpYzg4AJNBC0Jlu1f3VCNf9IQb/9v1JYEmL+uvZgBt77jdDJSsPLfdjK97m3xLTJXLdygvQ36gJr2ZqkdwDySsgqJARjtUe8=,hoGsEQr/XUEFJh+zUXtRG956jthFxDme5QJm7sCtO0I=,0VHOvHMOuJmuza+CVlVyAhdD8hBWzoZnGfHs/kc6u1k=,ggRVkKeHRDWUmPSHcZzgpSheGK2cUNMriQcr+/Z/4VM=",
+      "base64": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAVwAAAFcCAYAAACEFgYsAAAjCElEQVR4Ae...(PNG truncado na gravação)"
+    }
+  },
+  "destination": "http://host.docker.internal:3999/webhook",
+  "date_time": "2026-11-12T23:24:22.196Z",
+  "server_url": "http://localhost:8085",
+  "apikey": "00000000-0000-0000-0000-000000000000"
+}

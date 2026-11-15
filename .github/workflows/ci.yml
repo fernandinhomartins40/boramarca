@@ -13,6 +13,24 @@ jobs:
   quality-gate:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:17.12-alpine
+        env:
+          POSTGRES_USER: boramarca
+          POSTGRES_PASSWORD: boramarca
+          POSTGRES_DB: boramarca_test
+        ports: ['5440:5432']
+        options: >-
+          --health-cmd "pg_isready -U boramarca" --health-interval 5s --health-timeout 5s --health-retries 10
+      redis:
+        image: redis:8.8.4-alpine
+        ports: ['6390:6379']
+        options: >-
+          --health-cmd "redis-cli ping" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL_TEST: postgres://boramarca:boramarca@localhost:5440/boramarca_test
+      REDIS_URL_TEST: redis://localhost:6390/1
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4

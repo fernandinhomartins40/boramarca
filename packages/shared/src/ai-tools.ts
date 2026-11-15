@@ -124,3 +124,28 @@ export const AiTurnResult = z.object({
   calls: z.array(AiToolCall).min(1),
 });
 export type AiTurnResult = z.infer<typeof AiTurnResult>;
+
+// ---- Added by A3 (packages/ia): professional's free-text answer to a Decision, as an action.
+export const ProfessionalAnswerSource = z.enum(['rule', 'llm']);
+/**
+ * Output of `interpretProfessionalAnswer` ("pode, mas marca daqui 15 minutos").
+ * `accept.action` already carries the adjusted time; the backend still checks conflicts.
+ * `decline.action` is the chosen option's action, if the declining option had one.
+ */
+export const ProfessionalAnswer = z.discriminatedUnion('kind', [
+  z.object({
+    kind: z.literal('accept'),
+    optionId: z.string().nullable(),
+    action: AgendaActionCall.nullable(),
+    source: ProfessionalAnswerSource,
+  }),
+  z.object({
+    kind: z.literal('decline'),
+    optionId: z.string().nullable(),
+    action: AgendaActionCall.nullable(),
+    source: ProfessionalAnswerSource,
+  }),
+  z.object({ kind: z.literal('take_over'), source: ProfessionalAnswerSource }),
+  z.object({ kind: z.literal('unknown'), source: ProfessionalAnswerSource }),
+]);
+export type ProfessionalAnswer = z.infer<typeof ProfessionalAnswer>;

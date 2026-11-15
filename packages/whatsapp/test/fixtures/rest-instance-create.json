@@ -1,0 +1,33 @@
+{
+  "instance": {
+    "instanceName": "a2-capture-test",
+    "instanceId": "107aa360-ba41-4a8a-8af4-896fb9d3ba35",
+    "integration": "WHATSAPP-BAILEYS",
+    "webhookWaBusiness": null,
+    "accessTokenWaBusiness": "",
+    "status": "close"
+  },
+  "hash": "00000000-0000-0000-0000-000000000000",
+  "webhook": {
+    "webhookUrl": "http://host.docker.internal:3999/webhook",
+    "webhookHeaders": {
+      "x-boramarca-webhook-secret": "capture-secret"
+    },
+    "webhookByEvents": false,
+    "webhookBase64": true
+  },
+  "websocket": {},
+  "rabbitmq": {},
+  "nats": {},
+  "sqs": {},
+  "settings": {
+    "rejectCall": false,
+    "msgCall": "",
+    "groupsIgnore": true,
+    "alwaysOnline": false,
+    "readMessages": false,
+    "readStatus": false,
+    "syncFullHistory": false,
+    "wavoipToken": ""
+  }
+}
