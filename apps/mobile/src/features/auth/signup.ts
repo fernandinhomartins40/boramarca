@@ -24,6 +24,8 @@ export interface SignUpProgress {
 export interface SignUpDraft {
   step: number;
   name: string;
+  /** From the free sign-up (e-mail code); empty = the salon takes the person's name. */
+  salonName?: string;
   professions: Profession[];
   services: SuggestedService[];
   /** Professions the current service list was suggested for (re-suggest when they change). */
@@ -35,6 +37,7 @@ export interface SignUpDraft {
 const EMPTY: SignUpDraft = {
   step: 1,
   name: '',
+  salonName: '',
   professions: [],
   services: [],
   servicesFor: '',
@@ -64,14 +67,18 @@ export const useSignUpDraft = create<DraftStore>()(
  * POST /services per chosen service — the server's sign-up does not create suggested services.
  */
 export async function completeSignUp(
-  draft: Pick<SignUpDraft, 'name' | 'professions' | 'services' | 'week'>,
+  draft: Pick<SignUpDraft, 'name' | 'salonName' | 'professions' | 'services' | 'week'>,
   progress: SignUpProgress,
   onProgress: (p: SignUpProgress) => void,
 ): Promise<void> {
   const p = { ...progress };
   const name = draft.name.trim();
   if (!p.profile) {
-    await data.profile.updateMe({ name, professions: draft.professions, salonName: name });
+    await data.profile.updateMe({
+      name,
+      professions: draft.professions,
+      salonName: draft.salonName?.trim() || name,
+    });
     p.profile = true;
     onProgress({ ...p });
   }

@@ -71,6 +71,8 @@ const config: ExpoConfig = {
   ios: {
     bundleIdentifier: 'br.com.boramarca.app',
     buildNumber: BUILD_NUMBER,
+    // Firebase project rapidinho-entrega, shared by the owner's own products (phone login, docs/PENDENCIAS-HUMANAS.md item 3). Not a secret.
+    googleServicesFile: './GoogleService-Info.plist',
     supportsTablet: false,
     // App Store requires an icon without alpha (04-lojas/app-store/icone-1024-sem-alpha.png).
     icon: './assets/images/icon-ios.png',
@@ -112,6 +114,7 @@ const config: ExpoConfig = {
   android: {
     package: 'br.com.boramarca.app',
     versionCode: Number(BUILD_NUMBER),
+    googleServicesFile: './google-services.json',
     // Brought by Expo's template or by libraries and not used (plan section 11: no permission beyond
     // the used ones; store/declaracoes-android.md lists the final set). SYSTEM_ALERT_WINDOW stays
     // only in the debug manifest (dev client). Biometrics come from expo-secure-store (the app never
@@ -193,6 +196,12 @@ const config: ExpoConfig = {
       'expo-speech-recognition',
       { microphonePermission: MICROPHONE_TEXT, speechRecognitionPermission: SPEECH_TEXT },
     ],
+    // Phone login by Firebase Authentication (used when EXPO_PUBLIC_FIREBASE_AUTH=true). The auth
+    // plugin adds the iOS reCAPTCHA URL scheme; React Native Firebase needs dynamic frameworks on
+    // iOS (https://rnfirebase.io, Expo section: "static" breaks pod install).
+    '@react-native-firebase/app',
+    '@react-native-firebase/auth',
+    ['expo-build-properties', { ios: { useFrameworks: 'dynamic' } }],
     './plugins/withBalcaoService.cjs',
     './plugins/withWakeWord.cjs',
     './plugins/withWindowsCmake.cjs',

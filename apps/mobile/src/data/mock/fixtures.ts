@@ -63,6 +63,8 @@ export const professional: Professional = {
   waitlistRule: { ...DEFAULT_WAITLIST_RULE },
   skipMessagePreview: false,
   voiceRate: 1,
+  email: null,
+  emailVerifiedAt: null,
 };
 
 const service = (id: string, name: string, position: number): Service => ({

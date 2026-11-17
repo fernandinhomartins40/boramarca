@@ -4,6 +4,7 @@
 import { sql } from 'drizzle-orm';
 import {
   boolean,
+  date,
   index,
   integer,
   jsonb,
@@ -22,6 +23,7 @@ import {
   AppointmentEventType,
   AppointmentOrigin,
   AppointmentStatus,
+  BillingCycle,
   ClientOrigin,
   ConversationHandler,
   DEFAULT_AUTONOMY,
@@ -38,6 +40,8 @@ import {
   OtpPurpose,
   Plan,
   ProfessionalRole,
+  SubscriptionStatus,
+  TRIAL_DAYS,
   WaitlistEntryStatus,
   WaitlistOfferStatus,
   WhatsAppProvider,
@@ -93,6 +97,8 @@ export const decisionStatusEnum = enumOf('decision_status', DecisionStatus.optio
 export const decisionViaEnum = enumOf('decision_via', DecisionVia.options);
 export const waitlistEntryStatusEnum = enumOf('waitlist_entry_status', WaitlistEntryStatus.options);
 export const waitlistOfferStatusEnum = enumOf('waitlist_offer_status', WaitlistOfferStatus.options);
+export const subscriptionStatusEnum = enumOf('subscription_status', SubscriptionStatus.options);
+export const billingCycleEnum = enumOf('billing_cycle', BillingCycle.options);
 export const accountDeletionOriginEnum = enumOf(
   'account_deletion_origin',
   AccountDeletionOrigin.options,
@@ -104,6 +110,46 @@ export const salons = pgTable('salons', {
   name: text('name').notNull(),
   plan: planEnum('plan').notNull().default('essencial'),
   timezone: text('timezone').notNull().default(DEFAULT_TIMEZONE),
+  // ---- Subscription (docs/COBRANCA.md). A new salon starts a TRIAL_DAYS trial; salons from
+  // before billing were set `active` by the migration (no subscription = exempt).
+  trialEndsAt: ts('trial_ends_at').default(sql.raw(`now() + interval '${TRIAL_DAYS} days'`)),
+  subscriptionStatus: subscriptionStatusEnum('subscription_status').notNull().default('trial'),
+  billingCycle: billingCycleEnum('billing_cycle'),
+  /** Professionals charged (plan Salão). */
+  billingSeats: integer('billing_seats').notNull().default(1),
+  /** Each charge of the cycle, in cents. */
+  billingValueCents: integer('billing_value_cents'),
+  asaasCustomerId: text('asaas_customer_id').unique(),
+  asaasSubscriptionId: text('asaas_subscription_id').unique(),
+  billingCpfCnpj: text('billing_cpf_cnpj'),
+  billingEmail: text('billing_email'),
+  /** Next charge; for a canceled subscription, the end of what was paid. */
+  nextDueDate: date('next_due_date', { mode: 'string' }),
+});
+
+/** Mirror of the Asaas charges of each salon (idempotent by the Asaas id). */
+export const billingPayments = pgTable(
+  'billing_payments',
+  {
+    ...base,
+    salonId: uuid('salon_id')
+      .notNull()
+      .references(() => salons.id, { onDelete: 'cascade' }),
+    asaasId: text('asaas_id').notNull().unique(),
+    valueCents: integer('value_cents').notNull(),
+    dueDate: date('due_date', { mode: 'string' }).notNull(),
+    status: text('status').notNull(),
+    invoiceUrl: text('invoice_url'),
+    paidAt: date('paid_at', { mode: 'string' }),
+  },
+  (t) => [index('billing_payments_salon_idx').on(t.salonId, t.dueDate)],
+);
+
+/** Asaas webhook events already processed (delivery is "at least once"). */
+export const billingEvents = pgTable('billing_events', {
+  id: text('id').primaryKey(),
+  event: text('event').notNull(),
+  createdAt: ts('created_at').notNull().defaultNow(),
 });
 
 export const professionals = pgTable(
@@ -133,6 +179,14 @@ export const professionals = pgTable(
       .default(DEFAULT_WAITLIST_RULE),
     skipMessagePreview: boolean('skip_message_preview').notNull().default(false),
     voiceRate: real('voice_rate').notNull().default(1),
+    /** Optional, for transactional e-mail; no mail goes to it until `emailVerifiedAt` is set. */
+    email: text('email'),
+    emailVerifiedAt: ts('email_verified_at'),
+    /** sha256 of the single-use confirmation token (the token itself is never stored). */
+    emailTokenHash: text('email_token_hash').unique(),
+    emailTokenExpiresAt: ts('email_token_expires_at'),
+    /** null = phone not proven (e-mail sign-up): set by an SMS code or the WhatsApp pairing. */
+    phoneVerifiedAt: ts('phone_verified_at'),
     /** null = team invite not accepted yet: set when the person first logs in with their code. */
     joinedAt: ts('joined_at').defaultNow(),
   },

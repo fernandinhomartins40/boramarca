@@ -4,10 +4,13 @@ import type { WhatsAppGateway } from '@boramarca/whatsapp';
 import type { Config } from '../config';
 import type { Db } from '../db/client';
 import { professionals, salons } from '../db/schema';
+import type { Asaas } from './asaas';
 import type { Agenda } from '../modules/agenda/service';
 import type { PushSender } from '../modules/devices/push';
 import type { EventBus } from './event-bus';
 import { notFound } from './errors';
+import type { Mailer } from './mail/mailer';
+import type { MailTemplates } from './mail/templates';
 import type { Queues } from './queues';
 
 export interface Log {
@@ -30,6 +33,11 @@ export interface Core {
   transcriber: Transcriber | null;
   push: PushSender;
   queues: Queues;
+  /** Transactional e-mail (queue `email`) and its templates. */
+  mail: Mailer;
+  mailTemplates: MailTemplates;
+  /** Subscription billing client (docs/COBRANCA.md). */
+  asaas: Asaas;
 }
 
 export async function loadPro(db: Db, professionalId: string) {

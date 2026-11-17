@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "542492977454",
+    "project_id": "rapidinho-entrega",
+    "storage_bucket": "rapidinho-entrega.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:542492977454:android:07d90f6cd91eba1b03f2bf",
+        "android_client_info": {
+          "package_name": "br.com.boramarca.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCUWpd9xOOovA7POD-wb5KEDH0RwxGaFro"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:542492977454:android:3b5e99381436f10203f2bf",
+        "android_client_info": {
+          "package_name": "br.com.rapidinhoentrega.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCUWpd9xOOovA7POD-wb5KEDH0RwxGaFro"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -26,6 +26,8 @@ const Env = z.object({
   PUBLIC_API_URL: z.url().optional(),
   REVIEW_PHONE: z.string().optional(),
   REVIEW_OTP: z.string().optional(),
+  /** Firebase project (Authentication by phone = the SMS provider). Unset: POST /auth/firebase is 503. */
+  FIREBASE_PROJECT_ID: z.string().min(1).optional(),
   // Send guard (packages/whatsapp readSendGuardConfig), LLM and transcription (packages/ia
   // create*FromEnv): validated by those packages; kept here so the whole env is in one place.
   WA_GUARD_PER_MINUTE: z.string().optional(),
@@ -71,6 +73,23 @@ const Env = z.object({
     .string()
     .refine((s) => Buffer.from(s, 'base64').length === 32, '32 bytes em base64')
     .optional(),
+  /** Transactional e-mail (lib/mail). Without the key mails are only logged. */
+  VELOMAIL_API_URL: z.url().default('https://www.velomail.com.br/api/emails/send'),
+  VELOMAIL_API_KEY: z.string().min(1).optional(),
+  MAIL_FROM: z.string().min(3).default('Bora Marca <nao-responda@boramarca.com.br>'),
+  MAIL_REPLY_TO: z.email().default('contato@boramarca.com.br'),
+  /** Team inbox for new site leads/contact messages; unset = no notice. */
+  MAIL_OPS_TO: z.email().optional(),
+  /** Public addresses used in e-mail links (PUBLIC_API_URL is the internal one Evolution calls). */
+  PUBLIC_SITE_URL: z.url().default('https://boramarca.com.br'),
+  PUBLIC_API_BASE_URL: z.url().default('https://api.boramarca.com.br'),
+  /** Subscription billing (docs/COBRANCA.md). Without the key: billing writes answer 503. */
+  ASAAS_API_URL: z.url().default('https://api.asaas.com/v3'),
+  ASAAS_API_KEY: z.string().min(1).optional(),
+  /** Same token registered on the Asaas webhook (header asaas-access-token). */
+  ASAAS_WEBHOOK_TOKEN: z.string().min(32).max(255).optional(),
+  /** Days a charge may stay overdue before the AI and the reminders pause. */
+  BILLING_GRACE_DAYS: z.coerce.number().int().min(0).max(60).default(7),
 });
 
 export type Config = z.infer<typeof Env>;

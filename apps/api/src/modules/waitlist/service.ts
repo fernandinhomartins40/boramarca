@@ -8,6 +8,7 @@ import type { Job } from 'bullmq';
 import { firstName, renderMessage } from '@boramarca/ia';
 import {
   ACTIVE_APPOINTMENT_STATUSES,
+  automationAllowed,
   type DayPeriod,
   type WaitlistPreference,
 } from '@boramarca/shared';
@@ -185,7 +186,8 @@ export function createWaitlist(core: Core, deps: { outbox: Outbox }) {
     const rule = pro.p.waitlistRule;
     if (!rule.enabled && !opts.entryId) return null;
     // Automatic offers are the assistant talking: none while the AI is off or paused (M5).
-    if (!opts.entryId && !aiActive(pro.p, core.now())) return null;
+    const now = core.now();
+    if (!opts.entryId && (!aiActive(pro.p, now) || !automationAllowed(pro.salon, now))) return null;
     const tz = pro.salon.timezone;
     const made = await createOffer(slot, rule.waitMinutes, tz, opts.entryId);
     if (!made) return null;

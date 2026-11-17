@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { NAV } from '@/lib/site';
+import { NAV, SIGNUP_CTA } from '@/lib/site';
 import { Logo } from './Logo';
 import { btn, container } from './ui';
 
@@ -30,10 +30,11 @@ export function Header() {
             Entrar
           </Link>
           <Link
-            href="/contato"
+            href="/cadastro"
             className={`${btn.base} ${btn.accent} min-h-10 px-lg text-body-small`}
           >
-            Conhecer
+            <span className="sm:hidden">Começar grátis</span>
+            <span className="hidden sm:inline">{SIGNUP_CTA}</span>
           </Link>
         </div>
       </div>

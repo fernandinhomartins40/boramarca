@@ -46,7 +46,13 @@ export async function seedDemo(db: Db, now = new Date()) {
 
   const [salon] = await db
     .insert(t.salons)
-    .values({ name: 'Espaço Aurora', plan: 'salao', timezone: TZ })
+    .values({
+      name: 'Espaço Aurora',
+      plan: 'salao',
+      timezone: TZ,
+      subscriptionStatus: 'active',
+      trialEndsAt: null,
+    })
     .returning();
 
   interface Member {

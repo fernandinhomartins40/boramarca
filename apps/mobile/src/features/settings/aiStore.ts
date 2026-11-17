@@ -10,6 +10,8 @@ interface AiStore {
   aiEnabled: boolean;
   aiPausedUntil: IsoDateTime | null;
   apply: (s: Pick<AiStatus, 'aiEnabled' | 'aiPausedUntil'>) => void;
+  /** Trial over / subscription expired: the AI does not answer by itself (GET /me `billing`). */
+  billingPaused: boolean;
 }
 
 /**
@@ -22,11 +24,16 @@ export const useAiStore = create<AiStore>()(
       aiEnabled: true,
       aiPausedUntil: null,
       apply: ({ aiEnabled, aiPausedUntil }) => set({ aiEnabled, aiPausedUntil }),
+      billingPaused: false,
     }),
     {
       name: 'boramarca.ai',
       storage: createJSONStorage(() => AsyncStorage),
-      partialize: ({ aiEnabled, aiPausedUntil }) => ({ aiEnabled, aiPausedUntil }),
+      partialize: ({ aiEnabled, aiPausedUntil, billingPaused }) => ({
+        aiEnabled,
+        aiPausedUntil,
+        billingPaused,
+      }),
     },
   ),
 );
@@ -35,6 +42,13 @@ export function refreshAi() {
   return data.profile
     .getAiSettings()
     .then((s) => useAiStore.getState().apply(s))
+    .catch(() => undefined);
+}
+
+export function refreshBilling() {
+  return data.profile
+    .getMe()
+    .then((me) => useAiStore.setState({ billingPaused: me.billing?.automationPaused ?? false }))
     .catch(() => undefined);
 }
 

@@ -4,7 +4,6 @@ import { router } from 'expo-router';
 import {
   CircleQuestionMark,
   Crown,
-  ExternalLink,
   FileText,
   LogOut,
   Package,
@@ -25,6 +24,8 @@ import {
   showToast,
 } from '@/components';
 import { data } from '@/data';
+import { EmailSection } from '@/features/account/EmailSection';
+import { SUBSCRIBE_HINT, subscriptionLine } from '@/features/account/subscription';
 import { openSite } from '@/features/account/links';
 import { signOut } from '@/features/auth/session';
 import { errorMessage } from '@/features/settings/format';
@@ -34,7 +35,7 @@ import { useTheme } from '@/theme';
 
 const load = () => data.profile.getMe();
 
-/** Conta (prompt 10 + plan section 11): plano, Kit Balcão, ajuda, termos, privacidade, sair, excluir. */
+/** Conta (prompt 10 + plan section 11): e-mail, plano, Kit Balcão, ajuda, termos, privacidade, sair, excluir. */
 export default function AccountScreen() {
   const t = useTheme();
   const me = useLoad(load);
@@ -65,22 +66,24 @@ export default function AccountScreen() {
       ) : me.error || !me.data ? (
         <ErrorState message={me.error ?? undefined} onRetry={me.reload} />
       ) : (
-        <Section title="Plano">
-          <ListItem
-            icon={Crown}
-            title={`Plano ${PLAN_LABELS[me.data.salon.plan]}`}
-            subtitle="Ver planos e preços no site"
-            right={<ExternalLink color={t.colors.textMuted} size={t.sizes.iconSm} />}
-            chevron={false}
-            onPress={() => openSite('plans')}
-          />
-          <ListItem
-            icon={Package}
-            title="Kit Balcão"
-            subtitle="Quero o kit com celular + caixa"
-            onPress={() => setKitOpen(true)}
-          />
-        </Section>
+        <>
+          <EmailSection me={me.data} onChange={me.setData} />
+          <Section title="Plano">
+            {/* Store rule: the situation only, no payment link (docs/COBRANCA.md). */}
+            <ListItem
+              icon={Crown}
+              title={`Plano ${PLAN_LABELS[me.data.salon.plan]}`}
+              subtitle={`${subscriptionLine(me.data.billing)}. ${SUBSCRIBE_HINT}.`}
+              chevron={false}
+            />
+            <ListItem
+              icon={Package}
+              title="Kit Balcão"
+              subtitle="Quero o kit com celular + caixa"
+              onPress={() => setKitOpen(true)}
+            />
+          </Section>
+        </>
       )}
 
       <Section title="Ajuda e documentos">

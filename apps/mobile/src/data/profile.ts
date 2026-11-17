@@ -27,6 +27,8 @@ import { base, fail, newId, nowIso, reply } from './mock/util';
 export interface ProfileData {
   getMe(): Promise<MeResponse>;
   updateMe(patch: MePatch): Promise<MeResponse>;
+  /** New confirmation link for the pending e-mail (POST /me/email/resend). */
+  resendEmailConfirmation(): Promise<void>;
   getAiSettings(): Promise<AiSettings>;
   updateAiSettings(patch: AiSettingsPatch): Promise<AiSettings>;
   /** `until: null` = "até eu voltar". */
@@ -81,10 +83,18 @@ export const mockProfile: ProfileData = {
     return reply({ professional, salon });
   },
   async updateMe(patch) {
-    const { salonName, ...rest } = patch;
+    const { salonName, email, ...rest } = patch;
     Object.assign(professional, rest, { updatedAt: nowIso() });
+    // Mock: no mail goes out, the address just waits for confirmation.
+    if (email !== undefined && email !== professional.email)
+      Object.assign(professional, { email, emailVerifiedAt: null });
     if (salonName) salon.name = salonName;
     return reply({ professional, salon });
+  },
+  async resendEmailConfirmation() {
+    if (!professional.email || professional.emailVerifiedAt)
+      fail(409, 'NO_EMAIL', 'Nada para confirmar');
+    return reply(undefined);
   },
   async getAiSettings() {
     return reply(aiSettings());

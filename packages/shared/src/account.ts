@@ -17,10 +17,12 @@ export type AccountDeletion = z.infer<typeof AccountDeletion>;
 /**
  * `DELETE /me` body. Needs a fresh code (`POST /auth/otp/request` with `purpose: "delete_account"`).
  * An owner with other professionals must send `transferOwnershipTo` or `deleteWholeSalon: true`;
- * otherwise the API answers 409 with code `OWNER_HAS_TEAM`.
+ * otherwise the API answers 409 with code `OWNER_HAS_TEAM`. With Firebase phone login, send
+ * `idToken` (a fresh Firebase sign-in of the account's phone) instead of `code`; one of the two.
  */
 export const DeleteMeBody = z.object({
-  code: OtpCodeValue,
+  code: OtpCodeValue.optional(),
+  idToken: z.string().min(1).max(4096).optional(),
   origin: AccountDeletionOrigin,
   transferOwnershipTo: Id.optional(),
   deleteWholeSalon: z.boolean().optional(),

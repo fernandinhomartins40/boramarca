@@ -4,6 +4,7 @@ import { and, asc, desc, eq, inArray } from 'drizzle-orm';
 import type { Job } from 'bullmq';
 import { firstName, interpretProfessionalAnswer, renderMessage } from '@boramarca/ia';
 import {
+  automationAllowed,
   DECISION_NOTIFICATION_CATEGORY_ID,
   DECISION_NOTIFICATION_CHANNEL_ID,
   DEFAULT_DECISION_DEADLINE_MINUTES,
@@ -320,7 +321,8 @@ export function createDecisions(core: Core, deps: { outbox: Outbox; notify: Noti
 
   /** The assistant may still talk to this client: AI on and the conversation not taken over (B9). */
   async function aiMayReply(d: DecisionRow, pro: ProRow) {
-    if (!d.clientId || !aiActive(pro.p, core.now())) return false;
+    const now = core.now();
+    if (!d.clientId || !aiActive(pro.p, now) || !automationAllowed(pro.salon, now)) return false;
     if (!d.conversationId) return true;
     const [c] = await db
       .select({ handler: conversations.handler })

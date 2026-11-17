@@ -11,7 +11,8 @@ import '@/features/whatsapp/simulations';
 import { useTheme } from '@/theme';
 import { dateOnly } from '@/utils/agenda';
 import { salonClock } from '@/utils/timezone';
-import { refreshAi, useAiStore } from './aiStore';
+import { AUTOMATION_PAUSED_MESSAGE } from '@boramarca/shared';
+import { refreshAi, refreshBilling, useAiStore } from './aiStore';
 
 /** "IA pausada até 15:30 — …", "até 15/11 às 00:00", or with no end. */
 export function pausedLabel(until: string | null): string {
@@ -24,7 +25,8 @@ export function pausedLabel(until: string | null): string {
 
 /**
  * Fixed banners on every signed-in screen (rendered once in app/_layout.tsx, above the stack):
- * red "WhatsApp desconectado" (prompt 02) and "IA pausada" (prompt 10).
+ * red "WhatsApp desconectado" (prompt 02), "Seu teste terminou" (docs/COBRANCA.md) and "IA pausada"
+ * (prompt 10).
  */
 export function GlobalBanners() {
   const t = useTheme();
@@ -36,14 +38,19 @@ export function GlobalBanners() {
   useEffect(() => {
     if (!signedIn) return;
     refreshAi();
+    refreshBilling();
     // A timed pause ends on the server; this picks it up.
     const timer = setInterval(refreshAi, 60_000);
-    return () => clearInterval(timer);
+    const billing = setInterval(refreshBilling, 15 * 60_000);
+    return () => {
+      clearInterval(timer);
+      clearInterval(billing);
+    };
   }, [signedIn]);
 
   const onEntry = group === '(auth)' || group === '(onboarding)';
   const waDown = isWhatsAppDown(wa);
-  if (!signedIn || onEntry || (!waDown && ai.aiEnabled)) return null;
+  if (!signedIn || onEntry || (!waDown && ai.aiEnabled && !ai.billingPaused)) return null;
 
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={{ backgroundColor: t.colors.bg }}>
@@ -55,6 +62,13 @@ export function GlobalBanners() {
             tone="danger"
             message="WhatsApp desconectado — toque para reconectar"
             onPress={() => router.push('/whatsapp')}
+          />
+        ) : null}
+        {ai.billingPaused ? (
+          <Banner
+            tone="warning"
+            message={AUTOMATION_PAUSED_MESSAGE}
+            onPress={() => router.push('/ajustes/conta')}
           />
         ) : null}
         {!ai.aiEnabled ? (

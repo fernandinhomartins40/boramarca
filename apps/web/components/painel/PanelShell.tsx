@@ -11,7 +11,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { routes, type MeResponse } from '@boramarca/shared';
+import { AUTOMATION_PAUSED_MESSAGE, routes, type MeResponse } from '@boramarca/shared';
 import { Logo } from '@/components/site/Logo';
 import { browserStore, createClient, type PanelClient } from './client';
 import { Login } from './Login';
@@ -181,6 +181,16 @@ function Layout({
         </div>
       </aside>
       <main id="conteudo" className="min-w-0 flex-1 p-lg md:p-xl">
+        {me.billing?.automationPaused && (
+          <Link
+            href="/painel/plano"
+            role="alert"
+            className="mb-lg flex items-center gap-md rounded-md bg-warning px-lg py-md text-body font-semibold text-on-warning"
+          >
+            <Icon name="sparkle" /> {AUTOMATION_PAUSED_MESSAGE}
+            <Icon name="right" className="ml-auto size-5" />
+          </Link>
+        )}
         {children}
       </main>
     </div>

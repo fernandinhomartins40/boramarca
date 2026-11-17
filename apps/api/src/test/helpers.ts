@@ -41,7 +41,13 @@ export async function seedProfessional(
 ) {
   const [salon] = await db
     .insert(salons)
-    .values({ name: 'Teste', timezone: opts.timezone ?? 'America/Sao_Paulo' })
+    // Billing-agnostic: active (tests run with clocks years ahead; billing.test covers the trial).
+    .values({
+      name: 'Teste',
+      timezone: opts.timezone ?? 'America/Sao_Paulo',
+      subscriptionStatus: 'active',
+      trialEndsAt: null,
+    })
     .returning();
   const [p] = await db
     .insert(professionals)

@@ -3,7 +3,8 @@ import { mockAccount, type AccountData } from './account';
 import { mockAlexa, type AlexaData } from './alexa';
 import { mockAgenda, type AgendaData } from './agenda';
 import { api } from '@/lib/api';
-import { createApiData } from './api';
+import { createApiData, type PhoneSignIn } from './api';
+import { FIREBASE_AUTH_ENABLED } from './firebase-flag';
 import { mockAuth, type AuthData } from './auth';
 import { mockClients, type ClientsData } from './clients';
 import { mockConversationsData, type ConversationsData } from './conversations';
@@ -65,9 +66,16 @@ export function resolveDataSource(
 
 let apiData: DataLayer | null = null;
 
+const firebaseSignIn: PhoneSignIn = (phone) => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports -- native module, Firebase builds only
+  const m = require('@/lib/firebase-phone') as { firebasePhoneSignIn: PhoneSignIn };
+  return m.firebasePhoneSignIn(phone);
+};
+
 export function createData(source: DataSource): DataLayer {
   if (source === 'mock') return mockData;
-  apiData ??= createApiData(api);
+  // Firebase only in builds made with EXPO_PUBLIC_FIREBASE_AUTH=true (native module present).
+  apiData ??= createApiData(api, FIREBASE_AUTH_ENABLED ? firebaseSignIn : undefined);
   return apiData;
 }
 

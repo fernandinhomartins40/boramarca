@@ -94,5 +94,10 @@ export const Professional = EntityBase.extend({
   skipMessagePreview: z.boolean(),
   /** Speech rate for TTS (1 = normal). */
   voiceRate: z.number().min(0.5).max(2),
+  /** Optional, for transactional e-mail (email.ts). `emailVerifiedAt` null = awaiting confirmation. */
+  email: z.string().nullable(),
+  emailVerifiedAt: IsoDateTime.nullable(),
+  /** null = phone not proven yet (e-mail sign-up): set by an SMS code or the WhatsApp pairing. */
+  phoneVerifiedAt: IsoDateTime.nullable().optional(),
 });
 export type Professional = z.infer<typeof Professional>;

@@ -39,3 +39,9 @@ Bora-Marca-Kit/06-icones-interface/*-4k.png
 
 # Expo generated types
 expo-env.d.ts
+
+# Rendered e-mails (pnpm --filter @boramarca/api email:preview)
+apps/api/email-previews/
+
+# Claude Code local settings
+.claude/

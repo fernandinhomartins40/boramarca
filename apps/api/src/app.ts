@@ -102,7 +102,7 @@ export async function buildApp(config: Config, overrides: AppOverrides = {}) {
   if (config.NODE_ENV !== 'production') await registerDocs(app);
 
   // Unversioned liveness probe for Docker/Caddy.
-  app.get('/health', async () => healthPayload());
+  app.get('/health', async () => healthPayload(config));
 
   // Each folder in src/modules is a Fastify plugin mounted under /v1 (see src/modules/README.md).
   await app.register(autoload, {

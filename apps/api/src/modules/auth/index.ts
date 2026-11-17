@@ -1,14 +1,16 @@
 import { and, eq, isNull } from 'drizzle-orm';
 import type { FastifyInstance, FastifyPluginAsync } from 'fastify';
-import { routes, type MeResponse } from '@boramarca/shared';
+import { automationAllowed, routes, type MeResponse } from '@boramarca/shared';
 import { professionals, refreshFamilies, salons } from '../../db/schema';
 import { audit } from '../../lib/audit';
 import { AppError, notFound } from '../../lib/errors';
 import { route } from '../../lib/route';
 import { wire } from '../../lib/serialize';
+import { setEmail } from '../email/service';
 import { deleteAccount } from './account';
-import { verifyLogin } from './login';
-import { consumeOtp, requestOtp } from './otp';
+import { verifyFirebaseIdToken } from './firebase';
+import { loginProvenPhone, verifyLogin } from './login';
+import { consumeOtp, OTP_TTL_SECONDS, requestOtp } from './otp';
 
 /** GET /me payload; also used after PATCH. */
 export async function loadMe(app: FastifyInstance, professionalId: string): Promise<MeResponse> {
@@ -18,7 +20,15 @@ export async function loadMe(app: FastifyInstance, professionalId: string): Prom
     .innerJoin(salons, eq(salons.id, professionals.salonId))
     .where(eq(professionals.id, professionalId));
   if (!row) throw notFound('Profissional');
-  return { professional: wire(row.p), salon: wire(row.s) };
+  return {
+    professional: wire(row.p),
+    salon: wire(row.s),
+    billing: {
+      status: row.s.subscriptionStatus,
+      trialEndsAt: row.s.trialEndsAt?.toISOString() ?? null,
+      automationPaused: !automationAllowed(row.s, app.now()),
+    },
+  };
 }
 
 /** A refresh token reused this soon after its rotation is a race, not theft: no revocation. */
@@ -48,6 +58,30 @@ const auth: FastifyPluginAsync = async (app) => {
     async (req) => {
       const { scope, isNewUser, purpose } = await verifyLogin(app, req.body.phone, req.body.code, {
         createAccount: true,
+      });
+      return {
+        ...app.issueTokens(scope, purpose === 'delete_account' ? { scp: 'delete_account' } : {}),
+        isNewUser,
+      };
+    },
+    otpLimit,
+  );
+
+  const firebasePhone = (idToken: string) => {
+    const projectId = app.config.FIREBASE_PROJECT_ID;
+    if (!projectId)
+      throw new AppError(503, 'OTP_UNAVAILABLE', 'Envio de código indisponível no momento');
+    return verifyFirebaseIdToken(idToken, projectId);
+  };
+
+  // Firebase did the SMS; from the proven phone on it is the same path as /auth/otp/verify.
+  route(
+    app,
+    a.firebaseLogin,
+    async (req) => {
+      const { phone } = await firebasePhone(req.body.idToken);
+      const { scope, isNewUser, purpose } = await loginProvenPhone(app, phone, req.body.purpose, {
+        createAccount: req.body.purpose === 'login',
       });
       return {
         ...app.issueTokens(scope, purpose === 'delete_account' ? { scp: 'delete_account' } : {}),
@@ -144,13 +178,21 @@ const auth: FastifyPluginAsync = async (app) => {
       .from(professionals)
       .where(eq(professionals.id, req.scope.professionalId));
     if (!p) throw notFound('Profissional');
-    return deleteAccount(app.messaging.core, req.scope.professionalId, req.body, () =>
-      consumeOtp(app, p.phone, req.body.code, ['delete_account']).then(() => {}),
-    );
+    const { code, idToken } = req.body;
+    return deleteAccount(app.messaging.core, req.scope.professionalId, req.body, async () => {
+      if (idToken) {
+        // A fresh Firebase sign-in of this account's own phone stands for the deletion code.
+        const t = await firebasePhone(idToken);
+        if (t.phone !== p.phone || Date.now() / 1000 - t.authTime > OTP_TTL_SECONDS)
+          throw new AppError(400, 'OTP_INVALID', 'Código errado. Confira e tente de novo.');
+      } else if (code) await consumeOtp(app, p.phone, code, ['delete_account']);
+      else throw new AppError(400, 'OTP_INVALID', 'Informe o código de exclusão.');
+    });
   });
 
   route(app, a.updateMe, async (req) => {
-    const { salonName, ...fields } = req.body;
+    const { salonName, email, ...fields } = req.body;
+    if (email !== undefined) await setEmail(app.messaging.core, req.scope.professionalId, email);
     if (salonName !== undefined) {
       if (req.scope.role !== 'owner')
         throw new AppError(403, 'FORBIDDEN', 'Só o dono pode mudar o nome do espaço');

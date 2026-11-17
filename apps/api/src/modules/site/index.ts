@@ -16,6 +16,17 @@ const site: FastifyPluginAsync = async (app) => {
         .values({ name, phone, profession, message, source })
         .returning({ id: leads.id });
       req.log.info({ leadId: row!.id, source }, 'lead received');
+      // Team notice (MAIL_OPS_TO); a mail problem never loses the lead, which is already saved.
+      const ops = app.config.MAIL_OPS_TO;
+      if (ops) {
+        const { mail, mailTemplates } = app.messaging.core;
+        await mail
+          .send({
+            to: ops,
+            ...mailTemplates.newLead({ ...req.body, receivedAt: app.now() }),
+          })
+          .catch((err: unknown) => req.log.error({ err }, 'lead notice not queued'));
+      }
       return { ok: true as const, id: row!.id };
     },
     { config: { rateLimit: { max: app.config.RATE_LIMIT_LEADS_MAX, timeWindow: '10 minutes' } } },

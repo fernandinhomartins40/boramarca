@@ -1,16 +1,39 @@
-import { routes } from '@boramarca/shared';
+import { routes, type OtpPurpose } from '@boramarca/shared';
 import type { ApiClient } from '@/lib/api/client';
 import { setSalonTimezone } from '@/utils/timezone';
+import { DataError } from './errors';
 import type { DataLayer } from './index';
+
+/** Sends the SMS (Firebase); resolves to a function that turns the typed code into an ID token. */
+export type PhoneSignIn = (phone: string) => Promise<(code: string) => Promise<string>>;
 
 /**
  * API implementation of every domain (plan section 9), on top of the HTTP client of src/lib/api:
  * paths and response schemas come from `routes` (packages/shared), errors arrive as `DataError`.
  * Pure (no React Native import), so scripts/roteiro-api.ts runs it under Node too.
  */
-export function createApiData(api: ApiClient): DataLayer {
+export function createApiData(api: ApiClient, phoneSignIn?: PhoneSignIn): DataLayer {
   const id = (value: string) => ({ params: { id: value } });
   const r = routes;
+  /**
+   * When the API answers `provider: "firebase"`, Firebase sent the SMS: the code typed next is
+   * checked by Firebase and its ID token goes to POST /auth/firebase (or DELETE /me).
+   */
+  let firebase: {
+    phone: string;
+    purpose: OtpPurpose;
+    confirm: (code: string) => Promise<string>;
+    used?: { code: string; idToken: string };
+  } | null = null;
+  const idTokenFor = async (purpose: OtpPurpose, code: string, phone?: string) => {
+    const f = firebase;
+    if (!f || f.purpose !== purpose || (phone !== undefined && f.phone !== phone)) return null;
+    // Same code again (e.g. DELETE /me after choosing who keeps the salon): same ID token.
+    if (f.used?.code === code) return f.used.idToken;
+    const idToken = await f.confirm(code);
+    f.used = { code, idToken };
+    return idToken;
+  };
   /** Device registered in this session, removed on "Sair". */
   let deviceId: string | null = null;
 
@@ -28,8 +51,31 @@ export function createApiData(api: ApiClient): DataLayer {
 
   return {
     auth: {
-      requestOtp: (body) => api.call(r.auth.otpRequest, { body }),
-      verifyOtp: (body) => api.call(r.auth.otpVerify, { body }),
+      async requestOtp(body) {
+        const res = await api.call(r.auth.otpRequest, { body });
+        firebase = null;
+        if (res.provider === 'firebase') {
+          if (!phoneSignIn)
+            throw new DataError({
+              statusCode: 503,
+              code: 'OTP_UNAVAILABLE',
+              message: 'Envio de código indisponível no momento',
+            });
+          const purpose = body.purpose ?? 'login';
+          firebase = { phone: body.phone, purpose, confirm: await phoneSignIn(body.phone) };
+        }
+        return res;
+      },
+      requestSignup: (body) => api.call(r.signup.request, { body }),
+      verifySignup: (body) => api.call(r.signup.verify, { body }),
+      requestEmailCode: (body) => api.call(r.signup.emailCodeRequest, { body }),
+      verifyEmailCode: (body) => api.call(r.signup.emailCodeVerify, { body }),
+      async verifyOtp(body) {
+        const purpose = firebase?.purpose ?? 'login';
+        const idToken = await idTokenFor(purpose, body.code, body.phone);
+        if (!idToken) return api.call(r.auth.otpVerify, { body });
+        return api.call(r.auth.firebaseLogin, { body: { idToken, purpose } });
+      },
       // Stop the pushes to this phone, then end the session on the server (POST /auth/logout
       // revokes this refresh token and its rotations). Both tolerate failure: the caller
       // (features/auth signOut) forgets the tokens anyway.
@@ -48,6 +94,7 @@ export function createApiData(api: ApiClient): DataLayer {
         return me;
       },
       updateMe: (body) => api.call(r.auth.updateMe, { body }),
+      resendEmailConfirmation: async () => void (await api.call(r.email.resendConfirmation)),
       // no GET /ai/settings: the same fields come in GET /me
       async getAiSettings() {
         const { professional: p } = await api.call(r.auth.me);
@@ -87,7 +134,12 @@ export function createApiData(api: ApiClient): DataLayer {
       disconnect: async () => void (await api.call(r.whatsapp.deleteSession)),
     },
     account: {
-      deleteMe: (body) => api.call(r.auth.deleteMe, { body }),
+      async deleteMe({ code, ...body }) {
+        const idToken = code ? await idTokenFor('delete_account', code) : null;
+        return api.call(r.auth.deleteMe, {
+          body: idToken ? { ...body, idToken } : { ...body, code },
+        });
+      },
       createKitLead: (body) => api.call(r.salon.kitLead, { body }),
     },
     agenda: {

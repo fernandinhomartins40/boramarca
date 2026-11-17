@@ -16,9 +16,19 @@ ARG NEXT_PUBLIC_SITE_URL=https://boramarca.com.br
 ARG NEXT_PUBLIC_SUPPORT_EMAIL=contato@boramarca.com.br
 ARG NEXT_PUBLIC_PLAY_URL=
 ARG NEXT_PUBLIC_APPSTORE_URL=
+# Firebase web app of project rapidinho-entrega, shared by the owner's own products (public by design). Used only when the API answers
+# provider "firebase" (FIREBASE_PROJECT_ID set on the API), so it can stay in every build.
+ARG NEXT_PUBLIC_FIREBASE_API_KEY=AIzaSyBtQiIDAa51J1_kFdJtIAJUwqKcMp9XtwM
+ARG NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=rapidinho-entrega.firebaseapp.com
+ARG NEXT_PUBLIC_FIREBASE_PROJECT_ID=rapidinho-entrega
+ARG NEXT_PUBLIC_FIREBASE_APP_ID=1:542492977454:web:a6d641e6133b538903f2bf
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL \
     NEXT_PUBLIC_SUPPORT_EMAIL=$NEXT_PUBLIC_SUPPORT_EMAIL NEXT_PUBLIC_PLAY_URL=$NEXT_PUBLIC_PLAY_URL \
-    NEXT_PUBLIC_APPSTORE_URL=$NEXT_PUBLIC_APPSTORE_URL
+    NEXT_PUBLIC_APPSTORE_URL=$NEXT_PUBLIC_APPSTORE_URL \
+    NEXT_PUBLIC_FIREBASE_API_KEY=$NEXT_PUBLIC_FIREBASE_API_KEY \
+    NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=$NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN \
+    NEXT_PUBLIC_FIREBASE_PROJECT_ID=$NEXT_PUBLIC_FIREBASE_PROJECT_ID \
+    NEXT_PUBLIC_FIREBASE_APP_ID=$NEXT_PUBLIC_FIREBASE_APP_ID
 # shortcut: next.config.ts has no `output: 'standalone'`, so the runtime keeps next's prod
 # node_modules (pnpm deploy); switch to .next/standalone once apps/web enables it.
 RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \

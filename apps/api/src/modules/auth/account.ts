@@ -134,10 +134,19 @@ export async function deleteAccount(
   }
 
   await confirm();
+  // Read before anything is erased: the deletion receipt needs the salon timezone.
+  const [salon] = await db.select().from(salons).where(eq(salons.id, me.salonId));
   if (heirId)
     await db.update(professionals).set({ role: 'owner' }).where(eq(professionals.id, heirId));
   const erased = [];
   for (const id of erase) erased.push(await eraseProfessional(core, id));
+  // The salon goes away: stop charging it (best effort; a failure is logged for a manual cancel).
+  if (dropSalon && salon?.asaasSubscriptionId)
+    await core.asaas
+      .deleteSubscription(salon.asaasSubscriptionId)
+      .catch((err: unknown) =>
+        core.log.error({ err, salonId: salon.id }, 'cobrança: assinatura NÃO cancelada no Asaas'),
+      );
   if (dropSalon) await db.delete(salons).where(eq(salons.id, me.salonId));
   const completedAt = core.now();
   await db.insert(accountDeletions).values(
@@ -148,6 +157,20 @@ export async function deleteAccount(
       origin: opts.origin,
     })),
   );
+  // Deletion receipt to each confirmed address. The address comes from the row read before the
+  // erase and now lives only in this queued mail (removed from Redis once delivered).
+  for (const p of erased)
+    if (p.email && p.emailVerifiedAt)
+      await core.mail
+        .send({
+          to: p.email,
+          ...core.mailTemplates.accountDeleted({
+            name: p.name,
+            completedAt,
+            timezone: salon?.timezone,
+          }),
+        })
+        .catch((err: unknown) => core.log.error({ err }, 'deletion receipt not queued'));
   return { ok: true as const, completedAt: completedAt.toISOString() };
 }
 

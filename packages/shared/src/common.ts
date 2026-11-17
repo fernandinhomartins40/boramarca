@@ -68,5 +68,7 @@ export const HealthResponse = z.object({
   status: z.literal('ok'),
   version: z.string(),
   time: IsoDateTime,
+  /** True when the API accepts Firebase phone sign-in (POST /auth/firebase). */
+  firebaseAuth: z.boolean().optional(),
 });
 export type HealthResponse = z.infer<typeof HealthResponse>;

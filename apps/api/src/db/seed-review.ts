@@ -47,7 +47,13 @@ async function seedReviewAccount(db: Db, phone: string, now: Date) {
   return db.transaction(async (tx) => {
     const [salon] = await tx
       .insert(t.salons)
-      .values({ name: REVIEW_SALON_NAME, plan: 'essencial', timezone: TZ })
+      .values({
+        name: REVIEW_SALON_NAME,
+        plan: 'essencial',
+        timezone: TZ,
+        subscriptionStatus: 'active',
+        trialEndsAt: null,
+      })
       .returning();
     const [p] = await tx
       .insert(t.professionals)

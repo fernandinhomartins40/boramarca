@@ -2,6 +2,20 @@ import type { z } from 'zod';
 import { HealthResponse, IdParams, OkResponse } from './common';
 import { DeleteMeBody, DeleteMeResponse } from './account';
 import {
+  AsaasWebhookRequest,
+  AsaasWebhookResponse,
+  BillingPlanChoice,
+  BillingSummary,
+  SubscribeBody,
+} from './billing';
+import {
+  EmailCodeRequestBody,
+  EmailCodeResponse,
+  EmailCodeVerifyBody,
+  SignupRequestBody,
+  SignupVerifyBody,
+} from './signup';
+import {
   AiPauseRequest,
   AiSettings,
   AiSettingsPatch,
@@ -34,6 +48,7 @@ import {
   SlotsResponse,
 } from './appointments';
 import {
+  FirebaseLoginBody,
   MePatch,
   MePatchResponse,
   MeResponse,
@@ -72,6 +87,7 @@ import {
 } from './decisions';
 import { DeviceRegisterBody, DeviceRegisterResponse } from './devices';
 import { KitLeadCreate, KitLeadCreateResponse, LeadCreate, LeadCreateResponse } from './leads';
+import { EmailConfirmQuery } from './email';
 import {
   SalonClientsQuery,
   SalonClientsResponse,
@@ -196,6 +212,13 @@ export const routes = {
       body: OtpVerifyBody,
       response: OtpVerifyResponse,
     }),
+    firebaseLogin: r({
+      method: 'POST',
+      path: '/auth/firebase',
+      auth: 'public',
+      body: FirebaseLoginBody,
+      response: OtpVerifyResponse,
+    }),
     refresh: r({
       method: 'POST',
       path: '/auth/refresh',
@@ -237,6 +260,23 @@ export const routes = {
       auth: 'public',
       body: LeadCreate,
       response: LeadCreateResponse,
+    }),
+  },
+  email: {
+    /** Sends a new confirmation link to the pending address (cooldown 60 s). */
+    resendConfirmation: r({
+      method: 'POST',
+      path: '/me/email/resend',
+      auth: 'jwt',
+      response: OkResponse,
+    }),
+    /** Link from the e-mail: redirects (302) to the site page `/email-confirmado?status=…`. */
+    confirm: r({
+      method: 'GET',
+      path: '/email/confirm',
+      auth: 'public',
+      query: EmailConfirmQuery,
+      response: OkResponse,
     }),
   },
   services: {
@@ -669,6 +709,69 @@ export const routes = {
       path: '/alexa/link',
       auth: 'jwt',
       response: AlexaSettingsResponse,
+    }),
+  },
+  /** Free sign-up and login by e-mail code (signup.ts); per-IP limit like /auth/otp/*. */
+  signup: {
+    request: r({
+      method: 'POST',
+      path: '/auth/signup/request',
+      auth: 'public',
+      body: SignupRequestBody,
+      response: EmailCodeResponse,
+    }),
+    verify: r({
+      method: 'POST',
+      path: '/auth/signup/verify',
+      auth: 'public',
+      body: SignupVerifyBody,
+      response: OtpVerifyResponse,
+    }),
+    emailCodeRequest: r({
+      method: 'POST',
+      path: '/auth/email-code/request',
+      auth: 'public',
+      body: EmailCodeRequestBody,
+      response: EmailCodeResponse,
+    }),
+    emailCodeVerify: r({
+      method: 'POST',
+      path: '/auth/email-code/verify',
+      auth: 'public',
+      body: EmailCodeVerifyBody,
+      response: OtpVerifyResponse,
+    }),
+  },
+  /** Subscription (docs/COBRANCA.md): only the owner; without ASAAS_API_KEY writes are 503. */
+  billing: {
+    get: r({ method: 'GET', path: '/billing', auth: 'owner', response: BillingSummary }),
+    subscribe: r({
+      method: 'POST',
+      path: '/billing/subscription',
+      auth: 'owner',
+      body: SubscribeBody,
+      response: BillingSummary,
+    }),
+    change: r({
+      method: 'PATCH',
+      path: '/billing/subscription',
+      auth: 'owner',
+      body: BillingPlanChoice,
+      response: BillingSummary,
+    }),
+    cancel: r({
+      method: 'DELETE',
+      path: '/billing/subscription',
+      auth: 'owner',
+      response: BillingSummary,
+    }),
+    /** Asaas events; header `asaas-access-token` = ASAAS_WEBHOOK_TOKEN. Idempotent. */
+    webhook: r({
+      method: 'POST',
+      path: '/webhooks/asaas',
+      auth: 'public',
+      body: AsaasWebhookRequest,
+      response: AsaasWebhookResponse,
     }),
   },
 } as const;

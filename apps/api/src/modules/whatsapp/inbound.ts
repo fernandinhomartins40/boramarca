@@ -4,6 +4,7 @@ import type { Job } from 'bullmq';
 import { buildContext, interpretClientMessage } from '@boramarca/ia';
 import {
   ACTIVE_APPOINTMENT_STATUSES,
+  automationAllowed,
   HEALTH_PROFESSIONS,
   type WhatsAppStatusResponse,
 } from '@boramarca/shared';
@@ -19,6 +20,7 @@ import {
 } from '../../db/schema';
 import { audit } from '../../lib/audit';
 import { aiActive, loadPro, type Core } from '../../lib/core';
+import { phoneProvenByWhatsApp } from '../signup/phone';
 import { realtimeEvent } from '../../lib/event-bus';
 import { withKeyLock } from '../../lib/queues';
 import { todayIn } from '../../lib/time';
@@ -151,6 +153,7 @@ export function createInbound(
         .set({ status: e.status, ...(e.phone && { phone: e.phone }) })
         .where(eq(whatsappSessions.id, session.id))
         .returning();
+      if (e.status === 'connected' && e.phone) await phoneProvenByWhatsApp(core, pid, e.phone);
       await audit(db, pid, 'system', 'whatsapp.status', {
         status: e.status,
         reasonCode: e.reasonCode,
@@ -248,6 +251,8 @@ export function createInbound(
     // Step 5: AI off, paused, or the professional took over. Before the waitlist: a "sim" to an
     // offer then waits for the professional instead of booking by itself (M5).
     const now = core.now();
+    // Trial over / subscription expired: messages only reach the app (docs/COBRANCA.md).
+    if (!automationAllowed(pro.salon, now)) return notifyApp('subscription_inactive');
     if (!aiActive(pro.p, now)) return notifyApp('ai_paused');
     if (row.conv.handler === 'human') return notifyApp('human_handler');
 

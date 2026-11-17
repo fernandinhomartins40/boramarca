@@ -10,6 +10,7 @@ import {
   type TeamMember,
 } from '@boramarca/shared';
 import { ApiCallError, callApi, toE164 } from '@/lib/api';
+import { sendFirebaseCode, type ConfirmCode } from '@/lib/firebase-phone';
 import { describe, Field } from './Field';
 import { btn, input } from './ui';
 
@@ -19,20 +20,32 @@ const msg = (err: unknown) =>
   err instanceof Error ? err.message : 'Algo deu errado. Tente de novo em instantes.';
 
 const ACCOUNT_NOT_FOUND = 'ACCOUNT_NOT_FOUND';
+const CAPTCHA_ID = 'del-captcha';
 export const NO_ACCOUNT = 'Não existe conta com este número.';
 
 /** Every code of this page is a `delete_account` one, so checking a number never signs it up. */
 export const requestDeleteCode = (phone: string, fetchImpl?: typeof fetch) =>
   callApi(routes.auth.otpRequest, { body: { phone, purpose: 'delete_account' } }, fetchImpl);
 
-/** Spends the first code to enter the account; 404 ACCOUNT_NOT_FOUND when the number has none. */
+/**
+ * Spends the first code (or, with Firebase, its ID token) to enter the account; 404
+ * ACCOUNT_NOT_FOUND when the number has none.
+ */
 export async function signInToDelete(
   phone: string,
   code: string,
   fetchImpl?: typeof fetch,
+  idToken?: string,
 ): Promise<string> {
   try {
-    return (await callApi(routes.auth.otpVerify, { body: { phone, code } }, fetchImpl)).accessToken;
+    const t = idToken
+      ? await callApi(
+          routes.auth.firebaseLogin,
+          { body: { idToken, purpose: 'delete_account' } },
+          fetchImpl,
+        )
+      : await callApi(routes.auth.otpVerify, { body: { phone, code } }, fetchImpl);
+    return t.accessToken;
   } catch (err) {
     if (err instanceof ApiCallError && err.code === ACCOUNT_NOT_FOUND)
       throw new ApiCallError(err.status, err.code, NO_ACCOUNT);
@@ -43,13 +56,15 @@ export async function signInToDelete(
 /**
  * /excluir-conta, without the app: `DELETE /me` needs a session, so the person first proves the
  * number is theirs with a `delete_account` code (spent on entering the account), then confirms
- * with a fresh one.
+ * with a fresh one. When the API answers `provider: "firebase"`, Firebase sends each code and its
+ * ID token stands for it.
  */
 export function DeleteAccountFlow() {
   const [step, setStep] = useState<Step>('phone');
   const [phone, setPhone] = useState('');
   const [token, setToken] = useState('');
-  const [deleteCode, setDeleteCode] = useState('');
+  const [proof, setProof] = useState<Pick<DeleteMeBody, 'code' | 'idToken'>>({});
+  const [confirmCode, setConfirmCode] = useState<ConfirmCode | null>(null);
   const [team, setTeam] = useState<TeamMember[]>([]);
   const [error, setError] = useState('');
   const [info, setInfo] = useState('');
@@ -70,17 +85,25 @@ export function DeleteAccountFlow() {
     }
   };
 
+  /** Sends a `delete_account` code: by the API, or by Firebase when the API says so. */
+  const askCode = async () => {
+    const r = await requestDeleteCode(phone);
+    const confirm = r.provider === 'firebase' ? await sendFirebaseCode(phone, CAPTCHA_ID) : null;
+    setConfirmCode(() => confirm);
+  };
+  const idTokenFor = async (code: string) => (confirmCode ? confirmCode(code) : undefined);
+
   const onPhone = run(async () => {
     if (!PhoneE164.safeParse(phone).success)
       throw new Error('Informe o celular com DDD, por exemplo (11) 98765-4321.');
-    await requestDeleteCode(phone);
+    await askCode();
     setStep('loginCode');
   });
 
   const onLoginCode = (code: string) =>
     run(async () => {
       try {
-        setToken(await signInToDelete(phone, code));
+        setToken(await signInToDelete(phone, code, undefined, await idTokenFor(code)));
       } catch (err) {
         if (err instanceof ApiCallError && err.code === ACCOUNT_NOT_FOUND) setStep('phone');
         throw err;
@@ -89,13 +112,16 @@ export function DeleteAccountFlow() {
     });
 
   const onConfirm = run(async () => {
-    await requestDeleteCode(phone);
+    await askCode();
     setStep('deleteCode');
   });
 
-  const sendDelete = async (code: string, extra: Partial<DeleteMeBody> = {}) => {
+  const sendDelete = async (
+    p: Pick<DeleteMeBody, 'code' | 'idToken'>,
+    extra: Partial<DeleteMeBody> = {},
+  ) => {
     try {
-      await callApi(routes.auth.deleteMe, { body: { code, origin: 'web', ...extra }, token });
+      await callApi(routes.auth.deleteMe, { body: { ...p, origin: 'web', ...extra }, token });
       setToken('');
       setStep('done');
     } catch (err) {
@@ -112,21 +138,23 @@ export function DeleteAccountFlow() {
 
   const onDeleteCode = (code: string) =>
     run(async () => {
-      setDeleteCode(code);
-      await sendDelete(code);
+      const idToken = await idTokenFor(code);
+      const p = idToken ? { idToken } : { code };
+      setProof(p);
+      await sendDelete(p);
     });
 
   const onTeamChoice = (choice: string) =>
     run(() =>
       sendDelete(
-        deleteCode,
+        proof,
         choice === 'all' ? { deleteWholeSalon: true } : { transferOwnershipTo: choice },
       ),
     );
 
   const resend = () =>
     run(async () => {
-      await requestDeleteCode(phone);
+      await askCode();
       setInfo('Enviamos um novo código.');
     });
 
@@ -219,6 +247,7 @@ export function DeleteAccountFlow() {
           </p>
         </div>
       )}
+      <div id={CAPTCHA_ID} />
     </div>
   );
 }

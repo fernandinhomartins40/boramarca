@@ -13,10 +13,19 @@ import {
 import { FakeGateway, type WhatsAppGateway } from '@boramarca/whatsapp';
 import { firstName, renderMessage } from '@boramarca/ia';
 import { audit } from '../lib/audit';
+import { createAsaas } from '../lib/asaas';
 import { loadPro, type Core } from '../lib/core';
+import {
+  createMailer,
+  nullTransport,
+  velomailTransport,
+  type MailTransport,
+} from '../lib/mail/mailer';
+import { mailTemplates } from '../lib/mail/templates';
 import { createQueues } from '../lib/queues';
 import { purgeExpired, RETENTION_CRON } from '../lib/retention';
 import { createReminders } from '../modules/agenda/reminders';
+import { BILLING_CRON, BILLING_JOB, expireSubscriptions } from '../modules/billing/service';
 import { createToolRunner } from '../modules/ai/tools';
 import { createDecisions } from '../modules/decisions/service';
 import { createNotifier } from '../modules/devices/notify';
@@ -40,6 +49,10 @@ export interface MessagingOverrides {
   push?: PushSender;
   /** BullMQ key prefix (tests use a random one so runs do not see each other's jobs). */
   queuePrefix?: string;
+  /** E-mail delivery (tests: a fake that captures). Default: Velomail; under NODE_ENV=test, log only. */
+  mailTransport?: MailTransport;
+  /** HTTP used by the Asaas client (tests: a fake Asaas). */
+  asaasFetch?: typeof fetch;
 }
 
 /** Development without LLM keys: every message becomes a Decision ("IA simulada"). */
@@ -118,7 +131,13 @@ export default fp<{ overrides?: MessagingOverrides }>(async (app, { overrides = 
     overrides.queuePrefix ??
       (config.NODE_ENV === 'test' ? `bmt${randomBytes(4).toString('hex')}` : 'bm'),
   );
+  const mailTransport =
+    overrides.mailTransport ??
+    (config.NODE_ENV === 'test' ? nullTransport(app.log) : velomailTransport(config, app.log));
   const core: Core = {
+    asaas: createAsaas(config, app.log, overrides.asaasFetch),
+    mail: createMailer(queues, mailTransport),
+    mailTemplates: mailTemplates({ site: config.PUBLIC_SITE_URL, support: config.MAIL_REPLY_TO }),
     db: app.db,
     bus: app.bus,
     agenda: app.agenda,
@@ -141,19 +160,32 @@ export default fp<{ overrides?: MessagingOverrides }>(async (app, { overrides = 
   queues.startWorker('decisions', (j) => m.decisions.process(j), 4, onError);
   queues.startWorker(
     'reminders',
-    (j) => (j.name === RETENTION_JOB ? purgeExpired(app.db, app.now()) : m.reminders.process(j)),
+    (j) =>
+      j.name === RETENTION_JOB
+        ? purgeExpired(app.db, app.now())
+        : j.name === BILLING_JOB
+          ? expireSubscriptions(core)
+          : m.reminders.process(j),
     4,
     onError,
   );
   // Daily retention (leads 12 months, audit_log 90 days); one schedule shared by every instance.
   // Not under vitest: "production" test apps share the test Redis and must not leave a schedule.
-  if (!process.env.VITEST)
+  if (!process.env.VITEST) {
     await queues.queues.reminders.upsertJobScheduler(
       RETENTION_JOB,
       { pattern: RETENTION_CRON },
       { name: RETENTION_JOB },
     );
+    // Hourly: trial over without a subscription, or overdue past the grace days -> expired.
+    await queues.queues.reminders.upsertJobScheduler(
+      BILLING_JOB,
+      { pattern: BILLING_CRON },
+      { name: BILLING_JOB },
+    );
+  }
   queues.startWorker('waitlist', (j) => m.waitlist.process(j), 2, onError);
+  queues.startWorker('email', (j) => core.mail.process(j), 2, onError);
 
   // "Avisar o cliente" from the app (create/reschedule/cancel) goes out through the guard;
   // a new booking makes Decisions proposing that time expire.

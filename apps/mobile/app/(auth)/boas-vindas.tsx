@@ -63,10 +63,10 @@ export default function WelcomeScreen() {
       footer={
         <View style={{ flex: 1, gap: t.spacing.sm }}>
           <Button
-            label="Começar"
+            label="Criar conta grátis"
             size="lg"
             iconRight={ArrowRight}
-            onPress={() => router.push('/login')}
+            onPress={() => router.push('/criar-conta')}
           />
           <Button label="Já tenho conta" variant="neutral" onPress={() => router.push('/login')} />
         </View>

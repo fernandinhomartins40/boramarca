@@ -21,7 +21,7 @@ Regras para todos os itens:
 | --- | ----------------------------------------------------- | -------------- | -------------- | -------------------------------- |
 | 1   | VPS, DNS e primeiro deploy                            | Servidor e DNS | —              | quase tudo                       |
 | 2   | Chaves da IA e da transcrição; `pnpm eval`            | Chave          | —              | IA respondendo; testes reais     |
-| 3   | Provedor de SMS do código de login                    | Conta + código | —              | login real, painel, exclusão web |
+| 3   | SMS do login: SHA da Play no Firebase (após publicar) | Loja           | 15             | SMS no app da loja |
 | 4   | Contas Expo, Google Play e Apple Developer            | Conta          | —              | 5, 12, 13, 15                    |
 | 5   | EAS, `projectId` e push (Firebase e APNs)             | Conta e chave  | 4              | notificações reais, 11, 12, 15   |
 | 6   | Conta de revisão das lojas (`REVIEW_PHONE`)           | Servidor       | 1              | 13, 15, 16                       |
@@ -37,6 +37,7 @@ Regras para todos os itens:
 | 16  | Skill da Alexa e Voice Monkey                         | Conta e aparelho | 1, 6         | voz pela Alexa                   |
 | 17  | Repositório no GitHub e CI                            | Local          | —              | portão de qualidade automático   |
 | 18  | Apagar `C:\bm-clean`                                  | Local          | —              | —                                |
+| 19  | Cobrança: chave e webhook do Asaas                    | Chave e conta  | 1              | assinaturas pagas                |
 
 Cobertura da lista "Só uma pessoa consegue fazer" (`docs/01-analise.md`): contas → 4; builds de
 loja e envio → 15; formulários e vídeo → 14 e 15; capturas do iPhone → 13; WhatsApp real → 8;
@@ -93,26 +94,29 @@ um áudio vira texto.
 
 **Depende dele:** item 8 com IA, lançamento.
 
-## 3. Provedor de SMS do código de login
+## 3. Provedor de SMS do código de login (Firebase Authentication) — ligado (17/11/2026)
 
-Em produção, sem provedor, `POST /v1/auth/otp/request` responde **503 `OTP_UNAVAILABLE`** (de
-propósito). Isso trava o login de qualquer pessoa real no app, o login do painel web e a página
-`/excluir-conta`. A conta de revisão (item 6) não depende de SMS.
+O SMS sai pelo login por telefone do Firebase, no projeto **`rapidinho-entrega`**, que reúne os
+produtos do próprio dono e já tem faturamento e o provedor Telefone ligado, só para o Brasil. Os
+apps Bora Marca (Android e iOS `br.com.boramarca.app` e Web) estão cadastrados lá, com o SHA-1 e o
+SHA-256 da chave de upload e da chave de debug, e `boramarca.com.br`/`www` autorizados. Na VPS,
+`FIREBASE_PROJECT_ID=rapidinho-entrega`. O cadastro e o login também funcionam por código no
+e-mail (`docs/COBRANCA.md`). A conta de revisão continua com o código fixo. O projeto
+`boramarca-app` criado antes ficou sem uso; o pedido de aumento de cota do Google não é mais
+necessário para o Bora Marca.
 
-1. Escolha o provedor (ex.: Twilio Verify, Zenvia, AWS SNS, Infobip): preço por SMS no Brasil e
-   exigência de cadastro de remetente ou template.
-2. Crie a conta, pegue as credenciais e, se houver, aprove o template:
-   `Seu código Bora Marca: {{code}}. Vale por 10 minutos.`
-3. Peça a um desenvolvedor para implementar `OtpSender` (`apps/api/src/modules/auth/otp.ts`) para o
-   provedor e ligá-lo em `apps/api/src/plugins/auth.ts` (hoje, produção sem provedor usa
-   `unavailableOtpSender`). As credenciais entram como variáveis novas em `apps/api/.env.example` e
-   no `infra/.env.prod`.
+O que ainda é seu:
 
-**Conferir:** pedir código com um telefone real em homologação; o SMS chega e o login entra. No
-`/excluir-conta`, o primeiro código entra e o segundo confirma a exclusão; em `account_deletions`
-sobra só o registro com o hash do telefone.
+1. **Depois de publicar na Google Play:** Play Console → Bora Marca → Testar e lançar →
+   Configuração → Integridade do app → Assinatura de apps. Copie o **SHA-1** e o **SHA-256** do
+   "Certificado da chave de assinatura de apps" e passe para registrar no app Android do Firebase.
+   Sem isso, o app baixado da loja não consegue enviar o SMS (aconteceu com o Rapidinho em 11/2026).
+   Na mesma página, vincule a API Play Integrity ao projeto `rapidinho-entrega`.
+2. **App:** o build de loja precisa sair com `EXPO_PUBLIC_FIREBASE_AUTH=true` (já está em
+   `.github/workflows/apps-nativos.yml`).
 
-**Depende dele:** login real no app e no painel, exclusão de conta pela web (exigida pelas lojas).
+**Conferir:** `curl -s https://api.boramarca.com.br/v1/health` mostra `"firebaseAuth":true`; em
+https://boramarca.com.br/painel um celular real recebe o SMS e entra.
 
 ## 4. Contas Expo, Google Play e Apple Developer
 
@@ -138,9 +142,8 @@ com o app aberto.
 2. Copie o `projectId` (UUID, não é segredo) para a constante `EAS_PROJECT_ID` em
    `apps/mobile/app.config.ts` (o arquivo é dinâmico; o `eas init` não grava sozinho).
 3. **Android:** projeto no Firebase (https://console.firebase.google.com), app Android com o pacote
-   `br.com.boramarca.app`, baixe `google-services.json` para `apps/mobile/` (fora do git) e
-   acrescente `googleServicesFile: './google-services.json'` em `android` no `app.config.ts`.
-   Depois `eas credentials` → Android → production → Google Service Account Key for FCM V1.
+   `br.com.boramarca.app`: já feito (projeto `boramarca-app`; `apps/mobile/google-services.json`
+   e `googleServicesFile` no `app.config.ts`, item 3). Falta `eas credentials` → Android → production → Google Service Account Key for FCM V1.
 4. **iOS:** `eas credentials` → iOS → production → Push Notifications → deixe o EAS criar a chave
    APNs (login da conta Apple).
 5. Se o projeto Expo tiver "enhanced push security", gere um access token em expo.dev e ponha em
@@ -455,6 +458,34 @@ dele são cópias dos `.env.example`, sem segredo. **Não suba a infra a partir 
 
 **Conferir:** `Test-Path C:\bm-clean` devolve `False`; `docker compose -p boramarca ps` continua
 com os três serviços saudáveis.
+
+## 19. Cobrança: chave e webhook do Asaas
+
+O código da assinatura está pronto (`docs/COBRANCA.md`): teste grátis de 14 dias, assinatura no painel, webhook e
+expiração. Sem a chave, assinar responde 503 e o painel avisa que ainda não está disponível — o teste e a expiração
+valem mesmo assim. A conta do Asaas é a mesma do outro produto: **não mexa nos webhooks que já existem**.
+
+1. **Teste no sandbox primeiro** (recomendado): conta em https://sandbox.asaas.com → Integrações → Chaves de API. Rode a
+   API local com `ASAAS_API_URL=https://api-sandbox.asaas.com/v3`, assine pelo painel e pague a fatura de teste
+   (roteiro "Não verificado" em `docs/COBRANCA.md`).
+2. **Chave de produção:** no Asaas → Integrações → Chaves de API → gerar. Na VPS, em `/opt/boramarca/infra/.env.prod`:
+   ```
+   ASAAS_API_KEY='$aact_prod_…'        # aspas SIMPLES (o $ some sem elas)
+   ASAAS_WEBHOOK_TOKEN=<saída de: openssl rand -hex 32>
+   ```
+3. Reinicie a API: o `docker compose ... up -d` do item 1 (as migrações `0006_billing` e `0007_phone_verified` rodam
+   sozinhas).
+4. **Webhook:** Asaas → Integrações → Webhooks → **Criar Webhook** (um novo):
+   - Nome `Bora Marca` · URL `https://api.boramarca.com.br/v1/webhooks/asaas` · versão da API `v3`
+   - **Token de autenticação:** o mesmo `ASAAS_WEBHOOK_TOKEN`
+   - Fila de sincronização ativada · envio Sequencial · ativo
+   - Eventos: todos de **Cobranças** (`PAYMENT_*`) e de **Assinaturas** (`SUBSCRIPTION_*`).
+
+**Conferir:** no painel → Plano aparece o formulário de assinatura (não mais "ainda não está disponível"); assine uma
+conta de teste com o seu CPF e abra a fatura; em Asaas → Webhooks → Logs as entregas aparecem com **HTTP 200** (`401` =
+token diferente dos dois lados). Eventos do outro produto também chegam e são respondidos com 200 (ignorados).
+
+**Depende dele:** receber as assinaturas. Sem ele, quem termina o teste fica com a IA parada e sem como pagar.
 
 ---
 

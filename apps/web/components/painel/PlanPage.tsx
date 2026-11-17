@@ -4,16 +4,20 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useState } from 'react';
 import { PLAN_LABELS, routes, type SalonPlanResponse } from '@boramarca/shared';
+import { AccountEmail } from './AccountEmail';
 import { useSession } from './PanelShell';
+import { Subscription } from './Subscription';
 import { Async, btnPrimary, card, errorText, Icon, PageHeader, useLoad } from './ui';
 
-/** Current plan, usage and Kit Balcão interest. No billing history (docs/01-analise.md, item 5). */
+/** Subscription (docs/COBRANCA.md), current plan, usage and Kit Balcão interest. */
 export function PlanPage() {
   const { api } = useSession();
   const plan = useLoad(() => api.call(routes.salon.plan), []);
   return (
     <>
       <PageHeader title="Plano" />
+      <Subscription />
+      <AccountEmail />
       <Async state={plan}>{(p) => <Plan plan={p} onKitSent={() => void plan.reload()} />}</Async>
     </>
   );
@@ -52,9 +56,6 @@ function Plan({ plan: p, onKitSent }: { plan: SalonPlanResponse; onKitSent: () =
                 {p.activeProfessionals === 1 ? 'profissional ativo' : 'profissionais ativos'}
               </p>
             </div>
-            <p className="border-l border-border pl-xl text-heading text-text">
-              Valor conforme contrato
-            </p>
           </div>
         </section>
         <section className={`${card} p-xl`}>

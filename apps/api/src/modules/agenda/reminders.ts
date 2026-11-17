@@ -5,7 +5,7 @@
 import { eq } from 'drizzle-orm';
 import type { Job } from 'bullmq';
 import { firstName, renderMessage } from '@boramarca/ia';
-import type { AppointmentView } from '@boramarca/shared';
+import { automationAllowed, type AppointmentView } from '@boramarca/shared';
 import { appointments } from '../../db/schema';
 import { loadPro, type Core } from '../../lib/core';
 import type { Outbox } from '../whatsapp/send';
@@ -56,6 +56,8 @@ export function createReminders(core: Core, deps: { outbox: Outbox }) {
     if (!a || a.status !== 'scheduled' || a.startsAt.toISOString() !== data.startsAt)
       return { status: 'stale' };
     const pro = await loadPro(db, a.professionalId);
+    // Automatic reminders pause while the subscription does not allow automation (docs/COBRANCA.md).
+    if (!automationAllowed(pro.salon, core.now())) return { status: 'paused' };
     const view = await core.agenda.getAppointment(a.professionalId, a.id);
     const text = renderMessage('reminder', pro.p.aiTone, {
       now: core.now().toISOString(),

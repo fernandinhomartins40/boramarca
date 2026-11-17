@@ -12,6 +12,8 @@ export const PLAY_URL = process.env.NEXT_PUBLIC_PLAY_URL || '';
 export const APPSTORE_URL = process.env.NEXT_PUBLIC_APPSTORE_URL || '';
 
 export const SITE_NAME = 'Bora Marca';
+/** Free sign-up call to action (landing and header). */
+export const SIGNUP_CTA = 'Começar grátis — 14 dias';
 export const SITE_DESCRIPTION =
   'Agenda inteligente para profissionais que vivem de hora marcada: WhatsApp, agenda e voz trabalhando com você.';
 
@@ -30,4 +32,11 @@ export const LEGAL_LINKS = [
 ] as const;
 
 /** Pages listed in sitemap.xml. */
-export const PAGES = ['/', '/contato', '/privacidade', '/termos', '/excluir-conta'] as const;
+export const PAGES = [
+  '/',
+  '/cadastro',
+  '/contato',
+  '/privacidade',
+  '/termos',
+  '/excluir-conta',
+] as const;

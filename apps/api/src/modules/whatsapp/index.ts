@@ -9,6 +9,7 @@ import { loadPro } from '../../lib/core';
 import { AppError } from '../../lib/errors';
 import { realtimeEvent } from '../../lib/event-bus';
 import { route } from '../../lib/route';
+import { phoneProvenByWhatsApp } from '../signup/phone';
 import { DEMO_INSTANCE_PREFIX } from './gateway';
 import { statusResponse } from './inbound';
 
@@ -118,6 +119,8 @@ const whatsapp: FastifyPluginAsync = async (app) => {
       const row = changed
         ? await setStatus(s.id, { status: g.status, ...(g.phone && { phone: g.phone }) })
         : s;
+      if (changed && g.status === 'connected' && g.phone)
+        await phoneProvenByWhatsApp(app.messaging.core, s.professionalId, g.phone);
       return statusResponse(row, g);
     } catch {
       return statusResponse(s);

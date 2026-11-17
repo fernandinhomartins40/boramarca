@@ -54,6 +54,14 @@ export async function requestOtp(
       expiresInSeconds: OTP_TTL_SECONDS,
       retryAfterSeconds: OTP_RESEND_SECONDS,
     };
+  // Firebase sends the SMS (the client asks it directly); nothing to store or send here.
+  if (config.FIREBASE_PROJECT_ID)
+    return {
+      ok: true as const,
+      expiresInSeconds: OTP_TTL_SECONDS,
+      retryAfterSeconds: OTP_RESEND_SECONDS,
+      provider: 'firebase' as const,
+    };
   const [prev] = await db
     .select({ sentAt: otpCodes.createdAt })
     .from(otpCodes)

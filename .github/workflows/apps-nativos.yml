@@ -53,6 +53,8 @@ env:
   # Builds de loja falam com a produção
   EXPO_PUBLIC_API_URL: https://api.boramarca.com.br
   EXPO_PUBLIC_SITE_URL: https://boramarca.com.br
+  # Login code by SMS through Firebase (project rapidinho-entrega) when the API answers provider "firebase"
+  EXPO_PUBLIC_FIREBASE_AUTH: "true"
   EAS_PROJECT_ID: ${{ vars.EAS_PROJECT_ID }}
   EXPO_NO_TELEMETRY: 1
 

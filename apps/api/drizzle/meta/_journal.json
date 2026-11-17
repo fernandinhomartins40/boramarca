@@ -36,6 +36,27 @@
       "when": 1794780862652,
       "tag": "0004_security_review",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1794885671471,
+      "tag": "0005_professional_email",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1794886846432,
+      "tag": "0006_billing",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1794887619243,
+      "tag": "0007_phone_verified",
+      "breakpoints": true
     }
   ]
 }

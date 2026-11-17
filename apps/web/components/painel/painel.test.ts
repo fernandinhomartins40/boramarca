@@ -1,6 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
-import { routes, type AuthTokens } from '@boramarca/shared';
-import { answerDecision, movedStart, rescheduleAppointment } from './actions';
+import { emailState, routes, type AuthTokens } from '@boramarca/shared';
+import {
+  answerDecision,
+  movedStart,
+  resendEmailConfirmation,
+  rescheduleAppointment,
+  saveEmail,
+} from './actions';
 import { buildUrl, createClient, SESSION_EXPIRED, type TokenStore } from './client';
 import {
   addDays,
@@ -114,7 +120,10 @@ describe('createClient', () => {
     const fetchMock = vi.fn(async (url: RequestInfo | URL, init?: RequestInit) => {
       if (String(url).endsWith('/auth/refresh')) {
         store.value = tokens('other-tab'); // the other tab won the rotation
-        return Response.json({ statusCode: 401, code: 'UNAUTHORIZED', message: 'x' }, { status: 401 });
+        return Response.json(
+          { statusCode: 401, code: 'UNAUTHORIZED', message: 'x' },
+          { status: 401 },
+        );
       }
       const auth = new Headers(init?.headers).get('authorization');
       return auth === 'Bearer other-tab'
@@ -245,5 +254,41 @@ describe('panel writes', () => {
       status: 409,
       message: 'Esse horário acabou de ser ocupado',
     });
+  });
+});
+
+describe('account e-mail', () => {
+  const setup = () => {
+    const fetchMock = vi.fn(async () => Response.json({ ok: true }));
+    const api = createClient(memStore(tokens('a1')), {
+      fetchImpl: fetchMock,
+      baseUrl: 'http://api',
+      now: () => NOW,
+    });
+    return { api, fetchMock };
+  };
+
+  it('saves the address trimmed and lowercased; empty removes it', async () => {
+    const { api, fetchMock } = setup();
+    await saveEmail(api, '  Ana@Exemplo.COM ');
+    await saveEmail(api, '   ');
+    expect(fetchMock.mock.calls.map((c) => (c as unknown[])[1])).toMatchObject([
+      { method: 'PATCH', body: JSON.stringify({ email: 'ana@exemplo.com' }) },
+      { method: 'PATCH', body: JSON.stringify({ email: null }) },
+    ]);
+  });
+
+  it('resends the confirmation link', async () => {
+    const { api, fetchMock } = setup();
+    await resendEmailConfirmation(api);
+    expect((fetchMock.mock.calls[0] as unknown[])[0]).toBe('http://api/v1/me/email/resend');
+  });
+
+  it('shows none / aguardando / confirmado', () => {
+    expect(emailState({ email: null, emailVerifiedAt: null })).toBe('none');
+    expect(emailState({ email: 'a@b.co', emailVerifiedAt: null })).toBe('pending');
+    expect(emailState({ email: 'a@b.co', emailVerifiedAt: '2030-01-01T00:00:00.000Z' })).toBe(
+      'verified',
+    );
   });
 });

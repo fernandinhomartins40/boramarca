@@ -175,6 +175,33 @@ $C ps; $C logs --tail=100 api; $C up -d
 **Apps nativos:** `.github/workflows/apps-nativos.yml` compila Android e iOS no GitHub (sem Mac).
 No push só confere que compila; pelo botão "Run workflow" assina e envia, se os segredos existirem.
 
+## E-mail transacional
+
+A API manda e-mail pelo Velomail (servidor de e-mail próprio; domínio `boramarca.com.br` com SPF, DKIM e DMARC já verificados). O código fica em `apps/api/src/lib/mail/` (`mailer.ts`: transporte e fila; `templates.ts`: layout e textos).
+
+- **O que sai:** confirmação do e-mail do profissional (link de uso único, 24 h), boas-vindas ao confirmar, comprovante de exclusão de conta (só para e-mail confirmado) e aviso ao time a cada lead/mensagem do formulário do site (para `MAIL_OPS_TO`).
+- **Fila:** cada e-mail é um job na fila BullMQ `email` (6 tentativas, espera exponencial a partir de 2 s). O job é apagado do Redis ao ser entregue; falhas ficam 7 dias e aparecem no log como `queue job failed`.
+- **Variáveis** (`infra/.env.prod`): `VELOMAIL_API_KEY` (chave só de envio), `VELOMAIL_API_URL`, `MAIL_FROM`, `MAIL_REPLY_TO`, `MAIL_OPS_TO`, `PUBLIC_SITE_URL` (logo e página de resultado), `PUBLIC_API_BASE_URL` (link de confirmação). Sem a chave nada sai: o e-mail só vai para o log (sem o corpo em produção).
+- **Conferir o visual:** `pnpm --filter @boramarca/api email:preview` grava os HTML em `apps/api/email-previews/` (fora do git). Capturas de referência em `apps/api/docs/emails/`. A logo é `apps/web/public/email/logo-horizontal-negativo.png`, servida pelo site em `https://boramarca.com.br/email/`; o site precisa estar no ar para a logo aparecer.
+- **Testar de verdade:** cadastre seu e-mail em Ajustes → Conta no app (ou em Plano, no painel) e abra o link. No log da API aparece `e-mail enviado` (destinatário mascarado). Se o Velomail recusar, o log mostra o status e a fila tenta de novo.
+
+## Cobrança (Asaas)
+
+Assinatura dos profissionais: teste grátis de 14 dias e depois assinatura no painel (Plano), paga pelo Asaas. Tudo em
+`docs/COBRANCA.md`; ligar em produção: `docs/PENDENCIAS-HUMANAS.md`, item 19.
+
+- **Variáveis** (`infra/.env.prod`): `ASAAS_API_KEY` (aspas simples), `ASAAS_WEBHOOK_TOKEN`, `ASAAS_API_URL` (padrão
+  produção), `BILLING_GRACE_DAYS` (7). Sem a chave, assinar responde 503 e o resto funciona.
+- **Webhook:** `https://api.boramarca.com.br/v1/webhooks/asaas`. No log: `cobrança: webhook ignorado` (corpo de outro
+  produto da conta, normal), `cobrança: evento que pede atenção` (estorno, chargeback, assinatura removida no Asaas).
+- **Expiração:** job de hora em hora `billing-expire` (fila `reminders`); no log `assinatura expirada: automação pausada`.
+  Expirado = agenda e app funcionam, a IA não responde sozinha e os lembretes pausam.
+- **Liberar uma conta sem cobrança** (parceiro, demonstração):
+  `update salons set subscription_status='active', trial_ends_at=null where id='<id>'` no Postgres (sem assinatura no
+  Asaas = isenta).
+- **Cadastro por e-mail:** os códigos ficam no Redis (`emailcode:*`, 10 min) e saem pela fila `email`. Se o Velomail
+  estiver fora, ninguém novo consegue se cadastrar: veja `e-mail enviado` / `queue job failed` no log.
+
 ## Atualização
 
 1. Faça uma cópia de segurança (abaixo).

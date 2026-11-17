@@ -3,7 +3,7 @@ import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { Faq } from '@/components/site/Faq';
 import { btn, container } from '@/components/site/ui';
-import { APPSTORE_URL, PLAY_URL } from '@/lib/site';
+import { APPSTORE_URL, PLAY_URL, SIGNUP_CTA } from '@/lib/site';
 
 /** Interface icon from Bora-Marca-Kit/06-icones-interface (decorative). */
 const Icon = ({ name, className = 'size-6' }: { name: string; className?: string }) => (
@@ -133,8 +133,14 @@ export default function HomePage() {
             </h1>
             <p className="mt-lg text-body">WhatsApp, agenda e voz trabalhando com você.</p>
             <div className="mt-xl flex flex-wrap gap-md">
-              <Link href="/contato" className={`${btn.base} ${btn.accent}`}>
-                Conhecer a Bora Marca <Arrow />
+              <Link href="/cadastro" className={`${btn.base} ${btn.accent}`}>
+                {SIGNUP_CTA} <Arrow />
+              </Link>
+              <Link
+                href="/contato"
+                className={`${btn.base} border border-brand-neutro text-brand-neutro`}
+              >
+                Conhecer a Bora Marca
               </Link>
               {PLAY_URL && (
                 <a
@@ -413,8 +419,8 @@ export default function HomePage() {
               do seu tempo?
             </p>
           </div>
-          <Link href="/contato" className={`${btn.base} ${btn.accent}`}>
-            Quero conhecer a Bora Marca <Arrow />
+          <Link href="/cadastro" className={`${btn.base} ${btn.accent}`}>
+            {SIGNUP_CTA} <Arrow />
           </Link>
         </div>
       </Section>

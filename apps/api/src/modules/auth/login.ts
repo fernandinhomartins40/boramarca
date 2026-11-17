@@ -1,10 +1,11 @@
 import { and, eq, gt } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
-import type { OtpPurpose } from '@boramarca/shared';
+import { TRIAL_DAYS, type OtpPurpose } from '@boramarca/shared';
 import { ensureReviewAccount } from '../../db/seed-review';
 import { otpCodes, professionals, salons } from '../../db/schema';
 import { AppError } from '../../lib/errors';
 import type { Scope } from '../../plugins/auth';
+import { phoneProvenBySms } from '../signup/phone';
 import { consumeOtp, isReviewPhone } from './otp';
 
 const accountNotFound = () =>
@@ -33,11 +34,10 @@ export async function verifyLogin(
   code: string,
   opts: { createAccount: boolean },
 ): Promise<{ scope: Scope; isNewUser: boolean; purpose: OtpPurpose }> {
-  const { db, config } = app;
-  if (isReviewPhone(config, phone)) {
+  const { db } = app;
+  if (isReviewPhone(app.config, phone)) {
     await consumeOtp(app, phone, code, ['login']);
-    const r = await ensureReviewAccount(db, phone, app.now());
-    return { scope: r, isNewUser: false, purpose: 'login' };
+    return loginProvenPhone(app, phone, 'login', opts);
   }
   // Whichever pending code the person typed (a login code asked meanwhile must not block deletion).
   const purposes: OtpPurpose[] = !opts.createAccount
@@ -49,7 +49,24 @@ export async function verifyLogin(
   // Spent either way (the dev code 123456 skips the row); DELETE /me asks for a fresh one.
   if (purpose === 'delete_account')
     await db.delete(otpCodes).where(and(eq(otpCodes.phone, phone), eq(otpCodes.purpose, purpose)));
+  return loginProvenPhone(app, phone, purpose, opts);
+}
 
+/**
+ * The phone is proven (our code, or a Firebase phone sign-in): find the professional, activate a
+ * team invite, or create a salon of one on the first login.
+ */
+export async function loginProvenPhone(
+  app: FastifyInstance,
+  phone: string,
+  purpose: OtpPurpose,
+  opts: { createAccount: boolean },
+): Promise<{ scope: Scope; isNewUser: boolean; purpose: OtpPurpose }> {
+  const { db } = app;
+  if (isReviewPhone(app.config, phone)) {
+    const r = await ensureReviewAccount(db, phone, app.now());
+    return { scope: r, isNewUser: false, purpose };
+  }
   let [p] = await db.select().from(professionals).where(eq(professionals.phone, phone));
   // A team invite becomes active when its person first proves the number (M11).
   if (p && !p.joinedAt && purpose === 'login')
@@ -58,15 +75,23 @@ export async function verifyLogin(
       .set({ joinedAt: app.now() })
       .where(eq(professionals.id, p!.id))
       .returning();
+  if (p) await phoneProvenBySms(app.messaging.core, p);
   const isNewUser = !p;
   if (!p) {
     if (!opts.createAccount || purpose === 'delete_account') throw accountNotFound();
     // First login: a salon of one, owned by this professional. The quick sign-up fills it in.
     p = await db.transaction(async (tx) => {
-      const [s] = await tx.insert(salons).values({ name: 'Meu espaço' }).returning();
+      const trialEndsAt = new Date(app.now().getTime() + TRIAL_DAYS * 86_400_000);
+      const [s] = await tx.insert(salons).values({ name: 'Meu espaço', trialEndsAt }).returning();
       const [created] = await tx
         .insert(professionals)
-        .values({ salonId: s!.id, role: 'owner', name: 'Profissional', phone })
+        .values({
+          salonId: s!.id,
+          role: 'owner',
+          name: 'Profissional',
+          phone,
+          phoneVerifiedAt: app.now(),
+        })
         .onConflictDoNothing({ target: professionals.phone })
         .returning();
       if (!created) throw new AppError(409, 'CONFLICT', 'Tente de novo');
