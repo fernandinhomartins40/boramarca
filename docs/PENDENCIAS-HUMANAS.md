@@ -45,35 +45,22 @@ em Android e iPhone → 11 e 12; skill na Amazon → 16; VPS e DNS → 1; revis�
 
 ---
 
-## 1. VPS, DNS e primeiro deploy
+## 1. VPS, DNS e primeiro deploy — feito (17/11/2026)
 
-Sem isso não há site para as lojas, API para o app de produção, endpoint para a Alexa nem
-certificado TLS.
+O Bora Marca roda na VPS compartilhada 72.60.10.108, atrás do nginx do host, com certificado do
+certbot (renovação automática). O DNS de `boramarca.com.br`, `www` e `api` aponta para a VPS. O
+deploy é automático a cada push na `main` (`.github/workflows/deploy.yml`); detalhes em
+[`OPERACAO.md`](OPERACAO.md), "Produção na VPS".
 
-1. Contrate uma VPS Linux de 2 a 4 GB com Docker Engine e o plugin Compose.
-2. No DNS de `boramarca.com.br`, crie registros A (e AAAA, se houver IPv6) para `boramarca.com.br`,
-   `www.boramarca.com.br` e `api.boramarca.com.br` apontando para a VPS. Libere 80/TCP, 443/TCP e
-   443/UDP no firewall. Opcional: `api-homolog.boramarca.com.br` para o perfil `preview` do
-   `apps/mobile/eas.json` (outro endereço exige trocar o `eas.json`).
-3. Clone o repositório na VPS e crie `infra/.env.prod` a partir de `infra/.env.prod.example`.
-   Preencha todo `change-me` e as variáveis vazias que for usar:
-   - `ACME_EMAIL`: uma caixa do produto (não um e-mail pessoal); o Let's Encrypt escreve para ela.
-   - `POSTGRES_PASSWORD`, `REDIS_PASSWORD`, `EVOLUTION_API_KEY`, `JWT_ACCESS_SECRET`,
-     `JWT_REFRESH_SECRET` (diferentes entre si) e `WHATSAPP_WEBHOOK_SECRET` (16+ caracteres): um
-     valor novo para cada, com `openssl rand -base64 48`.
-   - `DATA_ENCRYPTION_KEY`: `openssl rand -base64 32`. **Nunca troque depois de salvos os tokens do
-     Voice Monkey** (ficam ilegíveis).
-   - `TRUST_PROXY=true`, `CORS_ORIGINS`, `DATABASE_URL`, `REDIS_URL` e `PUBLIC_API_URL` já vêm do
-     compose; não precisa pôr.
-4. Guarde uma cópia do `infra/.env.prod` fora da VPS (cofre de senhas).
-5. Suba conforme [`OPERACAO.md`](OPERACAO.md), "Produção".
+O que ainda é seu:
 
-**Conferir:** `https://api.boramarca.com.br/health` responde `{"status":"ok",...}`;
-`https://boramarca.com.br`, `/privacidade`, `/termos`, `/excluir-conta` e `/contato` abrem sem
-login; `docker compose ... logs caddy` mostra os certificados emitidos. A API se recusa a subir em
-produção com segredo `change-me`, segredos JWT iguais ou segredo do webhook curto (é de propósito).
+1. Guarde uma cópia de `/opt/boramarca/infra/.env.prod` (na VPS) num cofre de senhas. Os segredos
+   foram gerados lá e não existem em nenhum outro lugar.
+2. As chaves dos itens 2, 3, 10 e 16 entram nesse arquivo; depois de editar, rode na VPS
+   `cd /opt/boramarca && docker compose --env-file infra/.env.prod -f infra/docker-compose.prod.yml -f infra/docker-compose.vps.yml up -d`.
 
-**Depende dele:** 6, 7, 13, 15, 16 e os testes reais de 8, 11 e 12 contra a produção.
+**Conferir:** `https://api.boramarca.com.br/health` responde `{"status":"ok",...}` e
+`https://boramarca.com.br` abre a landing.
 
 ## 2. Chaves da IA e da transcrição; rodar `pnpm eval`
 

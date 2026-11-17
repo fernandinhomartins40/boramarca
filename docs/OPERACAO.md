@@ -140,6 +140,41 @@ das lojas, nunca no git.
 - Do site (`SUPPORT_EMAIL`, `PLAY_URL`, `APPSTORE_URL`, domínios): viram `NEXT_PUBLIC_*` no build,
   então `dc up -d --build web`.
 
+## Produção na VPS (atual)
+
+A produção roda na VPS compartilhada 72.60.10.108 (outros projetos no mesmo host). Difere do
+`docker-compose.prod.yml` puro em três pontos, todos em `infra/docker-compose.vps.yml`:
+
+- o **nginx do host** faz o HTTPS (certbot, webroot `/var/www/html`); o Caddy fica desligado.
+  Site: `/etc/nginx/sites-available/boramarca` (cópia de `infra/vps/nginx-host.conf`);
+- `web` escuta em `127.0.0.1:3150` e `api` em `127.0.0.1:3151` (`WEB_PORT`/`API_PORT`);
+- as imagens vêm prontas do GHCR (`ghcr.io/fernandinhomartins40/boramarca-api|web`): a VPS não compila.
+
+**Deploy:** todo push na `main` (fora `docs/`, `*.md` e `apps/mobile/`) roda `deploy.yml`: portão
+(`ci.yml`) → build e push das imagens → SSH na VPS com uma chave que só executa
+`/usr/local/bin/boramarca-deploy` (copia de `infra/vps/boramarca-deploy`). O script sincroniza o
+código em `/opt/boramarca`, grava `RELEASE=<sha>` em `infra/.env.prod`, baixa as imagens, sobe
+(`migrate` antes da `api`) e confere a saúde. Segredos do GitHub: `VPS_HOST`, `VPS_SSH_KEY`,
+`VPS_KNOWN_HOSTS`. Nunca crie branch: o deploy só olha a `main`.
+
+**Rollback:** na VPS, troque `RELEASE=` em `/opt/boramarca/infra/.env.prod` pelo SHA anterior (a
+imagem da release anterior fica guardada) e rode o `up -d` abaixo.
+
+**Comando base na VPS** (`ssh digiurban-vps`):
+
+```sh
+cd /opt/boramarca
+C="docker compose --env-file infra/.env.prod -f infra/docker-compose.prod.yml -f infra/docker-compose.vps.yml"
+$C ps; $C logs --tail=100 api; $C up -d
+```
+
+**Mudou `boramarca-deploy` ou `nginx-host.conf`?** Copie de novo para a VPS
+(`scp infra/vps/boramarca-deploy digiurban-vps:/usr/local/bin/`) — o deploy não reinstala esses dois.
+`infra/vps/preparar-vps.sh` refaz a preparação inteira e é idempotente.
+
+**Apps nativos:** `.github/workflows/apps-nativos.yml` compila Android e iOS no GitHub (sem Mac).
+No push só confere que compila; pelo botão "Run workflow" assina e envia, se os segredos existirem.
+
 ## Atualização
 
 1. Faça uma cópia de segurança (abaixo).

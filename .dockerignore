@@ -1,3 +1,0 @@
-# Build context of infra/docker/*.Dockerfile (repo root).
-# Verification-only launcher (FakeLlm, adjustable clock): never in the production image.
-apps/api/scripts/

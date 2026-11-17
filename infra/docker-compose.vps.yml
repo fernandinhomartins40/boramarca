@@ -1,0 +1,15 @@
+# VPS compartilhada (72.60.10.108): sobreposto a docker-compose.prod.yml pelo deploy (infra/vps/boramarca-deploy).
+# - O nginx do HOST já ocupa 80/443 e faz o HTTPS (certbot): o Caddy fica desligado (perfil "caddy").
+# - As imagens vêm prontas do GHCR (.github/workflows/deploy.yml): a VPS não compila.
+# - web e api só escutam em 127.0.0.1; o nginx do host encaminha boramarca.com.br e api.boramarca.com.br.
+services:
+  caddy:
+    profiles: [caddy]
+  web:
+    image: ghcr.io/fernandinhomartins40/boramarca-web:${RELEASE:-latest}
+    ports: ['127.0.0.1:${WEB_PORT:-3150}:3000']
+  api:
+    image: ghcr.io/fernandinhomartins40/boramarca-api:${RELEASE:-latest}
+    ports: ['127.0.0.1:${API_PORT:-3151}:3333']
+  migrate:
+    image: ghcr.io/fernandinhomartins40/boramarca-api:${RELEASE:-latest}

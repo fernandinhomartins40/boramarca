@@ -1,12 +1,13 @@
 name: CI
 
+# Portão de qualidade. Na main roda como primeiro passo do deploy (deploy.yml chama este arquivo).
 on:
-  push:
-    branches: [main]
   pull_request:
+  workflow_call:
+  workflow_dispatch:
 
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:

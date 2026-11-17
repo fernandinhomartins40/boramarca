@@ -1,0 +1,106 @@
+name: Deploy (GHCR -> VPS)
+
+# A cada push na main: portão de qualidade (ci.yml) -> imagens construídas nas máquinas do GitHub e publicadas
+# no GHCR -> a VPS (compartilhada com outros projetos) só baixa e sobe. O deploy entra por SSH com uma chave
+# que só consegue rodar /usr/local/bin/boramarca-deploy (infra/vps/boramarca-deploy).
+# Segredos (Settings › Secrets and variables › Actions): VPS_HOST, VPS_SSH_KEY, VPS_KNOWN_HOSTS.
+# Os segredos da aplicação ficam só na VPS, em /opt/boramarca/infra/.env.prod (docs/OPERACAO.md).
+
+'on':
+  push:
+    branches: [main]
+    # documentação e app nativo não reconstroem nem reimplantam a produção
+    paths-ignore:
+      - 'docs/**'
+      - '**.md'
+      - 'apps/mobile/**'
+      - 'Bora-Marca-Kit/**'
+      - 'Bora-Marca-pacote-completo/**'
+      - '.github/workflows/apps-nativos.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+# Um deploy por vez; se chegou commit novo, o que importa é o último.
+concurrency:
+  group: deploy-vps
+  cancel-in-progress: true
+
+env:
+  REGISTRY: ghcr.io
+  OWNER: fernandinhomartins40
+
+jobs:
+  # typecheck, lint, testes (com Postgres e Redis) e build. Falhou -> não implanta.
+  gate:
+    uses: ./.github/workflows/ci.yml
+
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: boramarca-api, dockerfile: infra/docker/api.Dockerfile }
+          - { name: boramarca-web, dockerfile: infra/docker/web.Dockerfile }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build e push ${{ matrix.name }}
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          push: true
+          # `latest` e o SHA do commit (rollback: RELEASE=<sha> no infra/.env.prod da VPS)
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.OWNER }}/${{ matrix.name }}:latest
+            ${{ env.REGISTRY }}/${{ env.OWNER }}/${{ matrix.name }}:${{ github.sha }}
+          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.OWNER }}/${{ matrix.name }}:buildcache
+          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.OWNER }}/${{ matrix.name }}:buildcache,mode=max
+          provenance: false
+          sbom: false
+          # NEXT_PUBLIC_* entram no bundle do site em tempo de build (só a imagem web usa).
+          # Links das lojas: preencha NEXT_PUBLIC_PLAY_URL/APPSTORE_URL quando o app for publicado.
+          build-args: |
+            NEXT_PUBLIC_API_URL=https://api.boramarca.com.br
+            NEXT_PUBLIC_SITE_URL=https://boramarca.com.br
+            NEXT_PUBLIC_SUPPORT_EMAIL=contato@boramarca.com.br
+            NEXT_PUBLIC_PLAY_URL=
+            NEXT_PUBLIC_APPSTORE_URL=
+
+  deploy:
+    # Só implanta se as imagens foram publicadas e o portão passou.
+    needs: [build, gate]
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://boramarca.com.br
+    steps:
+      - name: Deploy na VPS (pull only, sem build)
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/deploy && chmod 600 ~/.ssh/deploy
+          printf '%s\n' "$VPS_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          # A chave só roda /usr/local/bin/boramarca-deploy, que lê: SHA, usuário e token do GHCR
+          printf '%s\n%s\n%s\n' "$GITHUB_SHA" "$GITHUB_ACTOR" "$GHCR_TOKEN" \
+            | ssh -i ~/.ssh/deploy -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o ServerAliveInterval=30 "root@${VPS_HOST}"
+          rm -f ~/.ssh/deploy
+      - name: Conferir HTTPS
+        run: |
+          for u in https://boramarca.com.br/ https://api.boramarca.com.br/health; do
+            curl -fsS --retry 6 --retry-delay 10 --retry-all-errors -o /dev/null -w "%{http_code} $u\n" "$u"
+          done

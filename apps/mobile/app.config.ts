@@ -12,9 +12,10 @@ const MICROPHONE_TEXT =
 const SPEECH_TEXT =
   'O Bora Marca transforma o que você fala em texto para entender seus pedidos e responder decisões por voz no Modo Balcão, e para ditar mensagens nas conversas.';
 
-// Filled by a person after `eas init` (docs/PENDENCIAS-HUMANAS.md, item 5). Not a secret. Without it the app does
-// not register for push (src/lib/api/push.ts) and `eas build` asks to link the project.
-const EAS_PROJECT_ID: string | undefined = undefined;
+// Filled by a person after `eas init` (docs/PENDENCIAS-HUMANAS.md, item 5): paste it here or set EAS_PROJECT_ID
+// (GitHub variable for apps-nativos.yml). Not a secret. Without it the app does not register for push
+// (src/lib/api/push.ts) and `eas build` asks to link the project.
+const EAS_PROJECT_ID: string | undefined = process.env.EAS_PROJECT_ID || undefined;
 
 // EAS sets EAS_BUILD_PROFILE in the cloud (eas.json profile name). Locally: set it by hand.
 const PRODUCTION = process.env.EAS_BUILD_PROFILE === 'production';
@@ -53,17 +54,23 @@ const reasons = (type: string, list: string[]) => ({
   NSPrivacyAccessedAPITypeReasons: list,
 });
 
+const BUILD_NUMBER = /^\d+$/.test(process.env.APP_BUILD_NUMBER ?? '')
+  ? process.env.APP_BUILD_NUMBER!
+  : '1';
+
 const config: ExpoConfig = {
   name: 'Bora Marca',
   slug: 'bora-marca',
   scheme: 'boramarca',
-  version: '0.1.0',
+  // Store version and build number: set by .github/workflows/apps-nativos.yml (stores refuse a lower build number).
+  version: process.env.APP_VERSION || '0.1.0',
   orientation: 'default',
   userInterfaceStyle: 'automatic',
   icon: './assets/images/icon.png',
   backgroundColor: brand.grafite,
   ios: {
     bundleIdentifier: 'br.com.boramarca.app',
+    buildNumber: BUILD_NUMBER,
     supportsTablet: false,
     // App Store requires an icon without alpha (04-lojas/app-store/icone-1024-sem-alpha.png).
     icon: './assets/images/icon-ios.png',
@@ -104,6 +111,7 @@ const config: ExpoConfig = {
   },
   android: {
     package: 'br.com.boramarca.app',
+    versionCode: Number(BUILD_NUMBER),
     // Brought by Expo's template or by libraries and not used (plan section 11: no permission beyond
     // the used ones; store/declaracoes-android.md lists the final set). SYSTEM_ALERT_WINDOW stays
     // only in the debug manifest (dev client). Biometrics come from expo-secure-store (the app never
@@ -188,6 +196,7 @@ const config: ExpoConfig = {
     './plugins/withBalcaoService.cjs',
     './plugins/withWakeWord.cjs',
     './plugins/withWindowsCmake.cjs',
+    './plugins/withReleaseSigning.cjs',
   ],
   ...(EAS_PROJECT_ID ? { extra: { eas: { projectId: EAS_PROJECT_ID } } } : {}),
   experiments: {

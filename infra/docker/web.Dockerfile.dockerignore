@@ -16,3 +16,5 @@ Bora-Marca-pacote-completo
 apps/mobile/*
 !apps/mobile/package.json
 infra
+# Verification-only launcher (FakeLlm, adjustable clock): never in a production image.
+apps/api/scripts
