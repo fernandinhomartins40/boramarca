@@ -37,7 +37,7 @@ Regras para todos os itens:
 | 16  | Skill da Alexa e Voice Monkey                         | Conta e aparelho | 1, 6         | voz pela Alexa                   |
 | 17  | Repositório no GitHub e CI                            | Local          | —              | portão de qualidade automático   |
 | 18  | Apagar `C:\bm-clean`                                  | Local          | —              | —                                |
-| 19  | Cobrança: chave e webhook do Asaas                    | Chave e conta  | 1              | assinaturas pagas                |
+| 19  | Cobrança: teste real no Asaas (chave e webhook feitos) | Conta          | 1              | confiança na cobrança            |
 
 Cobertura da lista "Só uma pessoa consegue fazer" (`docs/01-analise.md`): contas → 4; builds de
 loja e envio → 15; formulários e vídeo → 14 e 15; capturas do iPhone → 13; WhatsApp real → 8;
@@ -459,33 +459,17 @@ dele são cópias dos `.env.example`, sem segredo. **Não suba a infra a partir 
 **Conferir:** `Test-Path C:\bm-clean` devolve `False`; `docker compose -p boramarca ps` continua
 com os três serviços saudáveis.
 
-## 19. Cobrança: chave e webhook do Asaas
+## 19. Cobrança: chave e webhook do Asaas — feito em 17/11/2026
 
-O código da assinatura está pronto (`docs/COBRANCA.md`): teste grátis de 14 dias, assinatura no painel, webhook e
-expiração. Sem a chave, assinar responde 503 e o painel avisa que ainda não está disponível — o teste e a expiração
-valem mesmo assim. A conta do Asaas é a mesma do outro produto: **não mexa nos webhooks que já existem**.
+- **Chave:** a mesma conta Asaas dos outros produtos (copiada do garfeed). Fica em `/opt/boramarca/infra/.env.prod` como
+  `ASAAS_API_KEY='$aact_…'`, entre aspas simples (sem elas o `$` some). `ASAAS_WEBHOOK_TOKEN` já foi gerado ali.
+- **Webhook:** `Bora Marca - assinaturas` → `https://api.boramarca.com.br/v1/webhooks/asaas`, envio sequencial, com eventos
+  de cobranças e assinaturas e o mesmo token. Conferido: token errado → 401; evento de outro produto → 200 ignorado.
+  **Não mexa nos webhooks dos outros produtos** (garfeed, precisari, simvio…).
 
-1. **Teste no sandbox primeiro** (recomendado): conta em https://sandbox.asaas.com → Integrações → Chaves de API. Rode a
-   API local com `ASAAS_API_URL=https://api-sandbox.asaas.com/v3`, assine pelo painel e pague a fatura de teste
-   (roteiro "Não verificado" em `docs/COBRANCA.md`).
-2. **Chave de produção:** no Asaas → Integrações → Chaves de API → gerar. Na VPS, em `/opt/boramarca/infra/.env.prod`:
-   ```
-   ASAAS_API_KEY='$aact_prod_…'        # aspas SIMPLES (o $ some sem elas)
-   ASAAS_WEBHOOK_TOKEN=<saída de: openssl rand -hex 32>
-   ```
-3. Reinicie a API: o `docker compose ... up -d` do item 1 (as migrações `0006_billing` e `0007_phone_verified` rodam
-   sozinhas).
-4. **Webhook:** Asaas → Integrações → Webhooks → **Criar Webhook** (um novo):
-   - Nome `Bora Marca` · URL `https://api.boramarca.com.br/v1/webhooks/asaas` · versão da API `v3`
-   - **Token de autenticação:** o mesmo `ASAAS_WEBHOOK_TOKEN`
-   - Fila de sincronização ativada · envio Sequencial · ativo
-   - Eventos: todos de **Cobranças** (`PAYMENT_*`) e de **Assinaturas** (`SUBSCRIPTION_*`).
-
-**Conferir:** no painel → Plano aparece o formulário de assinatura (não mais "ainda não está disponível"); assine uma
-conta de teste com o seu CPF e abra a fatura; em Asaas → Webhooks → Logs as entregas aparecem com **HTTP 200** (`401` =
-token diferente dos dois lados). Eventos do outro produto também chegam e são respondidos com 200 (ignorados).
-
-**Depende dele:** receber as assinaturas. Sem ele, quem termina o teste fica com a IA parada e sem como pagar.
+**Falta (pessoa):** uma assinatura real de ponta a ponta. Assine uma conta de teste com o seu CPF no painel → Plano, pague a
+primeira fatura (ou estorne depois) e confira em Asaas → Webhooks → Logs as entregas com HTTP 200 e o plano "ativo" no
+painel. O código só foi testado com o Asaas falso (roteiro "Não verificado" em `docs/COBRANCA.md`).
 
 ---
 
