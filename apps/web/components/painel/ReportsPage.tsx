@@ -287,7 +287,7 @@ function Heatmap({ heatmap }: { heatmap: SalonReportsResponse['heatmap'] }) {
   const hours = [...new Set(heatmap.map((h) => h.hour))].sort((a, b) => a - b);
   const at = (d: number, h: number) => heatmap.find((c) => c.weekday === d && c.hour === h);
   return (
-    <section className={`${card} overflow-x-auto p-xl`}>
+    <section className={`${card} relative min-w-0 overflow-x-auto p-xl`}>
       <div className="flex flex-wrap items-end justify-between gap-lg">
         <div>
           <h2 className="text-heading text-text">Disponibilidade de horários</h2>
@@ -295,7 +295,7 @@ function Heatmap({ heatmap }: { heatmap: SalonReportsResponse['heatmap'] }) {
             Quanto mais escuro, mais horários livres na agenda da equipe.
           </p>
         </div>
-        <ul className="flex gap-lg text-caption text-text" aria-hidden>
+        <ul className="flex flex-wrap gap-x-lg gap-y-sm text-caption text-text" aria-hidden>
           {[
             [0.1, 'Pouca disponibilidade'],
             [0.45, 'Média'],

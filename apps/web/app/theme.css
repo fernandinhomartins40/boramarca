@@ -63,7 +63,7 @@
 
 /* Semantic tokens switch with the color scheme. */
 @theme inline {
-  --font-sans: var(--font-inter), system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-sans: var(--font-brand), system-ui, -apple-system, 'Segoe UI', sans-serif;
   --color-bg: var(--bm-bg);
   --color-surface: var(--bm-surface);
   --color-surface-alt: var(--bm-surface-alt);

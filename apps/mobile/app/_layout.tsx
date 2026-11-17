@@ -12,14 +12,14 @@ import { GlobalBanners } from '@/features/settings';
 import { usePushRegistration } from '@/lib/api/push';
 import { useRealtimeConnection } from '@/lib/realtime';
 import { useTheme } from '@/theme';
-import { interFonts } from '@/theme/fonts';
+import { brandFonts } from '@/theme/fonts';
 
 // Keep the splash (symbol on grafite) until Inter is loaded.
 SplashScreen.preventAutoHideAsync().catch(() => undefined);
 
 export default function RootLayout() {
   const t = useTheme();
-  const [loaded, error] = useFonts(interFonts);
+  const [loaded, error] = useFonts(brandFonts);
   const hydrated = useSession((s) => s.hydrated);
   // on font error, fall back to the system font instead of hanging; wait for the stored session
   const ready = (loaded || !!error) && hydrated;

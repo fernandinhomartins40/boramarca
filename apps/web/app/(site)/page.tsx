@@ -1,33 +1,36 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
+import {
+  ArrowUpRight,
+  BellRing,
+  Brain,
+  CalendarCheck,
+  CalendarDays,
+  Check,
+  CheckCheck,
+  Flower2,
+  LockKeyhole,
+  type LucideIcon,
+  MessageCircle,
+  Mic,
+  PersonStanding,
+  Scissors,
+  Sparkles,
+  Stethoscope,
+} from 'lucide-react';
 import { Faq } from '@/components/site/Faq';
 import { btn, container } from '@/components/site/ui';
 import { APPSTORE_URL, PLAY_URL, SIGNUP_CTA } from '@/lib/site';
 
-/** Interface icon from Bora-Marca-Kit/06-icones-interface (decorative). */
-const Icon = ({ name, className = 'size-6' }: { name: string; className?: string }) => (
-  <Image
-    src={`/icones/${name}.svg`}
-    alt=""
-    width={24}
-    height={24}
-    className={className}
-    unoptimized
-  />
-);
+const Arrow = () => <ArrowUpRight aria-hidden className="size-5" strokeWidth={2.25} />;
 
-const Arrow = () => (
-  <svg aria-hidden viewBox="0 0 24 24" className="size-5 fill-none stroke-current stroke-2">
-    <path d="M7 17 17 7M8 7h9v9" />
-  </svg>
-);
-
-const AREAS = [
-  { icon: 'psicologia', label: 'Psicologia' },
-  { icon: 'tesoura', label: 'Beleza' },
-  { icon: 'fisioterapia', label: 'Fisioterapia' },
-  { icon: 'odontologia', label: 'Odontologia' },
+const AREAS: { icon: LucideIcon; label: string }[] = [
+  { icon: Brain, label: 'Psicologia' },
+  { icon: Scissors, label: 'Beleza' },
+  { icon: PersonStanding, label: 'Fisioterapia' },
+  { icon: Stethoscope, label: 'Saúde' },
+  { icon: Flower2, label: 'Bem-estar' },
 ];
 
 const ROTINA = [
@@ -110,55 +113,64 @@ function Section({
   children: ReactNode;
 }) {
   return (
-    <section id={id} className={`${container} scroll-mt-lg ${className}`}>
+    <section id={id} className={`${container} scroll-mt-xxl ${className}`}>
       {children}
     </section>
   );
 }
 
+const gap = 'mt-[clamp(4rem,9vw,7rem)]';
+const h2 =
+  'text-[clamp(1.75rem,4.2vw,2.75rem)] leading-[1.08] font-bold tracking-[-0.02em] text-balance text-text';
+const eyebrow =
+  'inline-flex items-center gap-sm rounded-pill px-md py-xs text-caption font-semibold tracking-[0.14em] uppercase';
+const darkOutline = `${btn.base} bm-glass text-brand-neutro hover:bg-brand-neutro/15`;
+
 export default function HomePage() {
   return (
-    <main id="conteudo">
+    <main id="conteudo" className="overflow-x-clip">
       {/* 2. Hero */}
-      <Section>
-        <div className="grid items-center gap-xl overflow-hidden rounded-[var(--bora-radius)] bg-brand-grafite px-[var(--bora-gutter)] pt-xxxl text-brand-neutro lg:grid-cols-[minmax(0,0.75fr)_minmax(0,1.25fr)] lg:pt-0">
-          <div className="min-w-0 lg:py-xxxl">
-            <p className="text-caption tracking-[0.2em] uppercase">
+      <Section className="pt-sm">
+        <div className="bm-hero grid items-center gap-xl overflow-hidden rounded-[var(--bora-radius)] px-[var(--bora-gutter)] pt-xxxl text-brand-neutro lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:pt-0">
+          <div className="min-w-0 lg:py-[clamp(3rem,6vw,6rem)]">
+            <p className={`${eyebrow} bm-glass text-brand-neutro`}>
+              <span aria-hidden className="size-2 shrink-0 rounded-pill bg-brand-lima" />
               Agenda inteligente para profissionais
             </p>
-            <h1 className="mt-lg text-hero">
+            <h1 className="mt-xl text-[clamp(2.4rem,4.6vw,3.9rem)] leading-[1.02] font-extrabold tracking-[-0.03em]">
               <span className="lg:whitespace-nowrap">Você atende.</span>
               <br />
               <span className="text-brand-lima lg:whitespace-nowrap">Seu tempo volta.</span>
             </h1>
-            <p className="mt-lg text-body">WhatsApp, agenda e voz trabalhando com você.</p>
-            <div className="mt-xl flex flex-wrap gap-md">
-              <Link href="/cadastro" className={`${btn.base} ${btn.accent}`}>
+            <p className="mt-lg max-w-md text-body text-brand-neutro/80">
+              WhatsApp, agenda e voz trabalhando com você.
+            </p>
+            <div className="mt-xl flex flex-col gap-md sm:flex-row sm:flex-wrap">
+              <Link href="/cadastro" className={`${btn.base} ${btn.accent} bm-lift`}>
                 {SIGNUP_CTA} <Arrow />
               </Link>
-              <Link
-                href="/contato"
-                className={`${btn.base} border border-brand-neutro text-brand-neutro`}
-              >
+              <Link href="/contato" className={darkOutline}>
                 Conhecer a Bora Marca
               </Link>
               {PLAY_URL && (
-                <a
-                  href={PLAY_URL}
-                  className={`${btn.base} border border-brand-neutro text-brand-neutro`}
-                >
+                <a href={PLAY_URL} className={darkOutline}>
                   Baixar no Google Play
                 </a>
               )}
               {APPSTORE_URL && (
-                <a
-                  href={APPSTORE_URL}
-                  className={`${btn.base} border border-brand-neutro text-brand-neutro`}
-                >
+                <a href={APPSTORE_URL} className={darkOutline}>
                   Baixar na App Store
                 </a>
               )}
             </div>
+            <ul className="mt-xl flex flex-wrap gap-x-xl gap-y-sm text-body-small text-brand-neutro/75">
+              {['14 dias grátis', 'Sem cartão para testar', 'Cancele quando quiser'].map((t) => (
+                <li key={t} className="flex items-center gap-xs">
+                  <Check aria-hidden className="size-4 text-brand-lima" strokeWidth={3} />
+                  {t}
+                </li>
+              ))}
+            </ul>
           </div>
           <div className="mx-auto w-full min-w-0 max-w-[44rem] self-end lg:max-w-none">
             <Image
@@ -179,29 +191,29 @@ export default function HomePage() {
         <div className="flex flex-col gap-sm border-b border-border pb-lg md:flex-row md:items-center md:justify-between">
           <p className="text-heading text-text">Feita para quem trabalha com hora marcada.</p>
           <p className="text-body-small text-text-muted">
-            Saúde / Beleza / Bem-estar / Aulas / Outros serviços
+            Saúde · Beleza · Bem-estar · Aulas · Outros serviços
           </p>
         </div>
         <div className="mt-xxl grid gap-xl lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] lg:items-center">
           <div>
-            <h2 className="text-title text-text md:text-display">
-              Para profissionais que vivem de hora marcada.
-            </h2>
-            <p className="mt-sm text-body-small text-text-muted">
+            <h2 className={h2}>Para profissionais que vivem de hora marcada.</h2>
+            <p className="mt-sm text-body text-text-muted">
               Saúde, beleza, bem-estar, aulas e outros serviços.
             </p>
           </div>
-          <ul className="grid grid-cols-2 gap-md sm:grid-cols-3 md:grid-cols-5">
-            {AREAS.map((a) => (
+          <ul className="grid grid-cols-2 gap-md sm:grid-cols-3">
+            {AREAS.map(({ icon: I, label }) => (
               <li
-                key={a.label}
-                className="flex flex-col items-center gap-sm rounded-md border border-border bg-surface px-sm py-lg text-caption text-text"
+                key={label}
+                className="bm-soft flex flex-col items-center gap-sm rounded-lg px-sm py-lg text-center text-body-small font-semibold text-text"
               >
-                <Icon name={a.icon} className="size-7" />
-                {a.label}
+                <span className="flex size-11 items-center justify-center rounded-md bg-surface text-primary-text shadow-sm">
+                  <I aria-hidden className="size-6" strokeWidth={1.75} />
+                </span>
+                {label}
               </li>
             ))}
-            <li className="flex items-center justify-center rounded-md bg-surface-alt px-sm py-lg text-center text-caption text-text">
+            <li className="flex items-center justify-center rounded-lg bg-primary px-sm py-lg text-center text-body-small font-semibold text-on-primary">
               E muitas outras áreas
             </li>
           </ul>
@@ -209,25 +221,30 @@ export default function HomePage() {
       </Section>
 
       {/* 4. Da conversa ao atendimento */}
-      <Section id="como-funciona" className="mt-xxxl">
-        <div className="grid gap-xl border-b border-border pb-xxxl lg:grid-cols-2 lg:items-center">
+      <Section id="como-funciona" className={gap}>
+        <div className="grid gap-xxl lg:grid-cols-2 lg:items-center">
           <div>
-            <h2 className="text-title text-text md:text-display">Da conversa ao atendimento.</h2>
-            <p className="mt-md max-w-md text-body text-text">
+            <p className={`${eyebrow} bg-surface-alt text-primary-text`}>
+              <MessageCircle aria-hidden className="size-4" /> WhatsApp
+            </p>
+            <h2 className={`${h2} mt-lg`}>Da conversa ao atendimento.</h2>
+            <p className="mt-md max-w-md text-body text-text-muted">
               Seu cliente pergunta pelo WhatsApp. A IA consulta os serviços e horários disponíveis e
               conduz o agendamento.
             </p>
             <ul className="mt-xl flex flex-wrap gap-sm">
-              {[
-                ['conversa', 'Dúvidas sobre serviços'],
-                ['calendario', 'Confirmações'],
-                ['notificacao', 'Lembretes'],
-              ].map(([icon, label]) => (
+              {(
+                [
+                  [MessageCircle, 'Dúvidas sobre serviços'],
+                  [CalendarCheck, 'Confirmações'],
+                  [BellRing, 'Lembretes'],
+                ] as const
+              ).map(([I, label]) => (
                 <li
                   key={label}
-                  className="flex items-center gap-sm rounded-md bg-surface-alt px-lg py-md text-caption text-text"
+                  className="flex items-center gap-sm rounded-pill border border-border bg-surface px-lg py-sm text-body-small font-medium text-text"
                 >
-                  <Icon name={icon!} className="size-5" />
+                  <I aria-hidden className="size-4 text-primary-text" />
                   {label}
                 </li>
               ))}
@@ -236,30 +253,26 @@ export default function HomePage() {
           <div
             role="group"
             aria-label="Exemplo de conversa no WhatsApp"
-            className="flex flex-col gap-md rounded-[var(--bora-radius)] bg-surface-alt p-xl text-body-small text-text"
+            className="bm-soft bm-lift flex flex-col gap-md rounded-[var(--bora-radius)] p-[clamp(1rem,3vw,2rem)] text-body-small text-text"
           >
-            <p className="max-w-[80%] self-start rounded-lg rounded-tl-sm bg-surface px-lg py-md shadow-sm">
+            <p className="max-w-[85%] self-start rounded-lg rounded-tl-sm bg-surface px-lg py-md shadow-sm">
               Tem horário amanhã à tarde?{' '}
-              <span className="ml-sm text-caption text-text-muted">10:24</span>
+              <span className="ml-xs text-caption whitespace-nowrap text-text-muted">10:24</span>
             </p>
-            <p className="max-w-[80%] self-end rounded-lg rounded-tr-sm bg-accent px-lg py-md text-on-accent shadow-sm">
+            <p className="max-w-[85%] self-end rounded-lg rounded-tr-sm bg-accent px-lg py-md text-on-accent shadow-sm">
               Tenho às 15h ou às 16h. Qual prefere?{' '}
-              <span className="ml-sm text-caption">10:24 ✓✓</span>
+              <span className="ml-xs inline-flex items-center gap-xs text-caption whitespace-nowrap">
+                10:24 <CheckCheck aria-label="lida" className="size-4" />
+              </span>
             </p>
-            <p className="max-w-[80%] self-start rounded-lg rounded-tl-sm bg-surface px-lg py-md shadow-sm">
-              Às 16h. <span className="ml-sm text-caption text-text-muted">10:25</span>
+            <p className="max-w-[85%] self-start rounded-lg rounded-tl-sm bg-surface px-lg py-md shadow-sm">
+              Às 16h. <span className="ml-xs text-caption text-text-muted">10:25</span>
             </p>
-            <p className="mt-sm flex items-center gap-md self-center rounded-md bg-surface px-xl py-md font-semibold shadow-sm">
-              <Icon name="calendario" className="size-5" />
+            <p className="mt-sm flex items-center gap-md self-center rounded-pill bg-surface px-xl py-md font-semibold shadow-md">
+              <CalendarDays aria-hidden className="size-5 shrink-0 text-primary-text" />
               Ana · Amanhã, 16h
-              <span className="flex size-6 items-center justify-center rounded-pill bg-primary text-on-primary">
-                <svg
-                  aria-hidden
-                  viewBox="0 0 24 24"
-                  className="size-4 fill-none stroke-current stroke-[3]"
-                >
-                  <path d="m6 12 4 4 8-8" />
-                </svg>
+              <span className="flex size-6 shrink-0 items-center justify-center rounded-pill bg-primary text-on-primary">
+                <Check aria-hidden className="size-4" strokeWidth={3} />
                 <span className="sr-only">Confirmado</span>
               </span>
             </p>
@@ -268,19 +281,24 @@ export default function HomePage() {
       </Section>
 
       {/* 5. O que muda na sua rotina */}
-      <Section id="recursos" className="mt-xxxl">
-        <h2 className="text-title text-text md:text-display">O que muda na sua rotina.</h2>
+      <Section id="recursos" className={gap}>
+        <h2 className={h2}>O que muda na sua rotina.</h2>
         <ul className="mt-xl grid gap-lg md:grid-cols-3">
           {ROTINA.map((c) => (
-            <li key={c.title} className="flex flex-col rounded-lg bg-surface-alt p-xl">
-              <Image
-                src={`/landing/${c.img}-1536.png`}
-                width={c.w}
-                height={c.h}
-                alt={c.alt}
-                sizes="(min-width: 768px) 30vw, 90vw"
-                className="mx-auto h-auto w-full max-w-xs object-contain"
-              />
+            <li
+              key={c.title}
+              className="bm-soft flex flex-col rounded-[var(--bora-radius)] p-xl transition-transform hover:-translate-y-1 motion-reduce:transition-none"
+            >
+              <div className="flex aspect-[3/2] items-center justify-center">
+                <Image
+                  src={`/landing/${c.img}-1536.png`}
+                  width={c.w}
+                  height={c.h}
+                  alt={c.alt}
+                  sizes="(min-width: 768px) 30vw, 90vw"
+                  className="h-full w-auto max-w-full object-contain"
+                />
+              </div>
               <h3 className="mt-lg text-heading text-text">{c.title}</h3>
               <p className="mt-sm text-body-small text-text-muted">{c.text}</p>
             </li>
@@ -289,25 +307,28 @@ export default function HomePage() {
       </Section>
 
       {/* 6. Modo Balcão */}
-      <Section id="modo-balcao" className="mt-xxxl">
-        <div className="grid items-center gap-xl overflow-hidden rounded-[var(--bora-radius)] bg-primary px-[var(--bora-gutter)] py-xxxl text-on-primary lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+      <Section id="modo-balcao" className={gap}>
+        <div className="bm-voz grid items-center gap-xl overflow-hidden rounded-[var(--bora-radius)] px-[var(--bora-gutter)] py-[clamp(2.5rem,6vw,5rem)] text-on-primary lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
           <div className="min-w-0">
-            <h2 className="text-hero">
+            <p className={`${eyebrow} bm-glass`}>
+              <Mic aria-hidden className="size-4" /> Modo Balcão
+            </p>
+            <h2 className="mt-lg text-[clamp(2.2rem,4.2vw,3.6rem)] leading-[1.02] font-extrabold tracking-[-0.03em]">
               <span className="lg:whitespace-nowrap">Mãos ocupadas?</span>
               <br />
               <span className="text-brand-lima lg:whitespace-nowrap">Responda por voz.</span>
             </h2>
-            <p className="mt-lg max-w-md text-body">
+            <p className="mt-lg max-w-md text-body text-on-primary/90">
               No Modo Balcão, o celular anuncia os pedidos. Você responde falando ou toca em Sim ou
               Não.
             </p>
-            <p className="mt-xl inline-flex items-center gap-md rounded-pill bg-surface py-sm pr-xl pl-sm text-body-small text-text">
-              <span className="flex size-9 items-center justify-center rounded-pill bg-accent">
-                <Icon name="microfone" className="size-5" />
+            <p className="mt-xl inline-flex items-center gap-md rounded-pill bg-surface py-sm pr-xl pl-sm text-body-small font-medium text-text shadow-lg">
+              <span className="flex size-9 shrink-0 items-center justify-center rounded-pill bg-accent text-on-accent">
+                <Mic aria-hidden className="size-5" />
               </span>
               O celular escuta. A caixa reproduz a voz.
             </p>
-            <p className="mt-lg max-w-md text-caption">
+            <p className="mt-lg max-w-md text-caption text-on-primary/80">
               No Android, o celular escuta mesmo com a tela bloqueada. No iPhone, o Modo Balcão
               funciona com o app aberto e a tela acesa.
             </p>
@@ -324,17 +345,20 @@ export default function HomePage() {
       </Section>
 
       {/* 7. Permissões da IA */}
-      <Section className="mt-xxxl">
+      <Section className={gap}>
         <div className="grid gap-xl lg:grid-cols-[minmax(0,1fr)_minmax(0,0.9fr)_minmax(0,1fr)] lg:items-center">
           <div>
-            <h2 className="text-title text-text md:text-display">
+            <p className={`${eyebrow} bg-surface-alt text-primary-text`}>
+              <Sparkles aria-hidden className="size-4" /> IA com limites
+            </p>
+            <h2 className={`${h2} mt-lg`}>
               A IA facilita.
               <br />
               Você dá a palavra final.
             </h2>
-            <p className="mt-md text-body-small text-text">
+            <p className="mt-md text-body text-text-muted">
               Defina o que pode acontecer automaticamente. Mudanças no horário de outro cliente{' '}
-              <strong>sempre</strong> passam por você.
+              <strong className="text-text">sempre</strong> passam por você.
             </p>
           </div>
           <Image
@@ -347,14 +371,14 @@ export default function HomePage() {
           />
           <ul
             aria-label="Exemplo de permissões da IA"
-            className="divide-y divide-border text-body-small text-text lg:border-l lg:border-border lg:pl-xl"
+            className="bm-soft divide-y divide-border rounded-lg px-lg text-body-small text-text"
           >
             {PERMISSOES.map((p) => (
               <li
                 key={p.label}
                 className="flex items-center justify-between gap-md py-md font-semibold"
               >
-                {p.label}
+                <span className="min-w-0">{p.label}</span>
                 {p.state === 'on' ? (
                   <span className="flex h-6 w-11 shrink-0 items-center justify-end rounded-pill bg-success p-xs">
                     <span aria-hidden className="size-4 rounded-pill bg-brand-grafite" />
@@ -362,8 +386,8 @@ export default function HomePage() {
                   </span>
                 ) : (
                   <span className="flex shrink-0 items-center gap-xs">
-                    <Icon name="cadeado" className="size-4" />
-                    <span className="rounded-pill bg-surface-alt px-sm py-xs text-caption text-primary-text">
+                    <LockKeyhole aria-hidden className="size-4 text-text-muted" />
+                    <span className="rounded-pill bg-surface px-sm py-xs text-caption whitespace-nowrap text-primary-text">
                       Sempre pergunta
                     </span>
                   </span>
@@ -375,15 +399,18 @@ export default function HomePage() {
       </Section>
 
       {/* 8. Três passos */}
-      <Section className="mt-xxxl">
-        <h2 className="text-title text-text md:text-display">Comece com o que você já usa.</h2>
-        <ol className="mt-xl grid gap-xl md:grid-cols-3">
+      <Section className={gap}>
+        <h2 className={h2}>Comece com o que você já usa.</h2>
+        <ol className="mt-xl grid gap-lg md:grid-cols-3">
           {PASSOS.map((p) => (
-            <li key={p.n} className="flex gap-lg">
-              <span aria-hidden className="text-display text-primary-text">
+            <li key={p.n} className="flex gap-lg rounded-lg border border-border bg-surface p-xl">
+              <span
+                aria-hidden
+                className="flex size-12 shrink-0 items-center justify-center rounded-md bg-primary text-heading font-bold text-on-primary"
+              >
                 {p.n}
               </span>
-              <div>
+              <div className="min-w-0">
                 <h3 className="text-body font-semibold text-text">{p.title}</h3>
                 <p className="mt-xs text-body-small text-text-muted">{p.text}</p>
               </div>
@@ -393,16 +420,16 @@ export default function HomePage() {
       </Section>
 
       {/* 9. Dúvidas */}
-      <Section id="duvidas" className="mt-xxxl">
-        <div className="grid gap-xl lg:grid-cols-[minmax(0,0.35fr)_minmax(0,1fr)]">
-          <h2 className="text-title text-text md:text-display">Antes de começar.</h2>
+      <Section id="duvidas" className={gap}>
+        <div className="grid gap-xl lg:grid-cols-[minmax(0,0.4fr)_minmax(0,1fr)]">
+          <h2 className={h2}>Antes de começar.</h2>
           <Faq items={FAQ} />
         </div>
       </Section>
 
       {/* 10. Chamada final */}
-      <Section className="mt-xxxl">
-        <div className="flex flex-col items-start gap-xl rounded-[var(--bora-radius)] bg-brand-grafite px-[var(--bora-gutter)] py-xxl text-brand-neutro md:flex-row md:items-center md:justify-between">
+      <Section className={`${gap} mb-xxl`}>
+        <div className="bm-cta flex flex-col items-start gap-xl overflow-hidden rounded-[var(--bora-radius)] px-[var(--bora-gutter)] py-[clamp(2.5rem,5vw,4rem)] text-brand-neutro md:flex-row md:items-center md:justify-between">
           <div className="flex items-center gap-xl">
             <Image
               src="/marca/simbolo-mono-branco.svg"
@@ -413,13 +440,13 @@ export default function HomePage() {
               className="h-14 w-auto md:h-16"
             />
             <span aria-hidden className="hidden h-16 w-px bg-brand-neutro/30 md:block" />
-            <p className="text-title md:text-display">
+            <p className="text-[clamp(1.6rem,3.6vw,2.5rem)] leading-[1.1] font-bold tracking-[-0.02em]">
               Bora cuidar
               <br />
               do seu tempo?
             </p>
           </div>
-          <Link href="/cadastro" className={`${btn.base} ${btn.accent}`}>
+          <Link href="/cadastro" className={`${btn.base} ${btn.accent} bm-lift w-full sm:w-auto`}>
             {SIGNUP_CTA} <Arrow />
           </Link>
         </div>

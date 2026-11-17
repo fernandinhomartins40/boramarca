@@ -128,14 +128,15 @@ export const touchTarget = {
   balcaoChoice: 120,
 } as const;
 
-/** Inter family names: `@expo-google-fonts/inter` keys on mobile, CSS weights on web. */
+/** Plus Jakarta Sans (the typeface of the approved landing, Bora-Marca-Kit/05-referencias): `@expo-google-fonts/plus-jakarta-sans` keys on mobile, CSS weights on web. */
 export const fontFamily = {
-  regular: 'Inter_400Regular',
-  medium: 'Inter_500Medium',
-  semibold: 'Inter_600SemiBold',
-  bold: 'Inter_700Bold',
+  regular: 'PlusJakartaSans_400Regular',
+  medium: 'PlusJakartaSans_500Medium',
+  semibold: 'PlusJakartaSans_600SemiBold',
+  bold: 'PlusJakartaSans_700Bold',
 } as const;
-export const fontFamilyWeb = 'Inter, system-ui, -apple-system, "Segoe UI", sans-serif';
+export const fontFamilyWeb =
+  '"Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", sans-serif';
 export const fontWeight = { regular: 400, medium: 500, semibold: 600, bold: 700 } as const;
 export type FontWeightToken = keyof typeof fontWeight;
 

@@ -64,7 +64,7 @@ ${sizeKeys
 
 /* Semantic tokens switch with the color scheme. */
 @theme inline {
-  --font-sans: var(--font-inter), system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-sans: var(--font-brand), system-ui, -apple-system, 'Segoe UI', sans-serif;
 ${tokenNames.map((k) => `  --color-${kebab(k)}: var(--bm-${kebab(k)});`).join('\n')}
 }
 

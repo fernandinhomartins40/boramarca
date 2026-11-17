@@ -1,10 +1,10 @@
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
+import { Plus_Jakarta_Sans } from 'next/font/google';
 import type { ReactNode } from 'react';
 import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from '@/lib/site';
 import './globals.css';
 
-const inter = Inter({ subsets: ['latin'], variable: '--font-inter', display: 'swap' });
+const brandFont = Plus_Jakarta_Sans({ subsets: ['latin'], variable: '--font-brand', display: 'swap' });
 
 // favicon.ico, icon.png, apple-icon.png and opengraph-image.png in this folder come from the kit.
 export const metadata: Metadata = {
@@ -24,7 +24,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="pt-BR" className={inter.variable}>
+    <html lang="pt-BR" className={brandFont.variable}>
       <body className="font-sans antialiased">{children}</body>
     </html>
   );

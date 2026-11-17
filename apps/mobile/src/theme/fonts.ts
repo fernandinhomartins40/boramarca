@@ -1,15 +1,15 @@
 import {
-  Inter_400Regular,
-  Inter_500Medium,
-  Inter_600SemiBold,
-  Inter_700Bold,
-} from '@expo-google-fonts/inter';
+  PlusJakartaSans_400Regular,
+  PlusJakartaSans_500Medium,
+  PlusJakartaSans_600SemiBold,
+  PlusJakartaSans_700Bold,
+} from '@expo-google-fonts/plus-jakarta-sans';
 import { fontFamily } from '@boramarca/shared';
 
 /** Font map for `useFonts`; keys are the `fontFamily` tokens of packages/shared. */
-export const interFonts = {
-  [fontFamily.regular]: Inter_400Regular,
-  [fontFamily.medium]: Inter_500Medium,
-  [fontFamily.semibold]: Inter_600SemiBold,
-  [fontFamily.bold]: Inter_700Bold,
+export const brandFonts = {
+  [fontFamily.regular]: PlusJakartaSans_400Regular,
+  [fontFamily.medium]: PlusJakartaSans_500Medium,
+  [fontFamily.semibold]: PlusJakartaSans_600SemiBold,
+  [fontFamily.bold]: PlusJakartaSans_700Bold,
 };

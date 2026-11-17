@@ -26,12 +26,12 @@ Expo SDK 58 + React Native + TypeScript estrito + expo-router. Android e iOS na 
 
 | Origem                         | O quê                                                                                                                                                                                                                                                                                                                                                                                   |
 | ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `packages/shared/src/theme.ts` | `colors.light/dark` (bg, surface, surfaceAlt, text, textMuted, primary, onPrimary, primaryText, accent, onAccent, accentSoft, success, onSuccess, warning, onWarning, danger, onDanger, border), `spacing` (4–48), `radii` (8/14/24/pill), `touchTarget` (56, 64, 96, 120), `typography` (display 32 … caption 13), `fontFamily` (Inter). Tons marcados "derivado" no README do shared. |
-| `src/theme/tokens.ts`          | `text` (escala com a família Inter de cada peso), `balcaoText`, `sizes`, `opacity`, `duration` e as cores de app `tabActive` (violeta no claro, lima no escuro, como na referência 04) e `scrim`.                                                                                                                                                                                       |
+| `packages/shared/src/theme.ts` | `colors.light/dark` (bg, surface, surfaceAlt, text, textMuted, primary, onPrimary, primaryText, accent, onAccent, accentSoft, success, onSuccess, warning, onWarning, danger, onDanger, border), `spacing` (4–48), `radii` (8/14/24/pill), `touchTarget` (56, 64, 96, 120), `typography` (display 32 … caption 13), `fontFamily` (Plus Jakarta Sans). Tons marcados "derivado" no README do shared. |
+| `src/theme/tokens.ts`          | `text` (escala com a família Plus Jakarta Sans de cada peso), `balcaoText`, `sizes`, `opacity`, `duration` e as cores de app `tabActive` (violeta no claro, lima no escuro, como na referência 04) e `scrim`.                                                                                                                                                                                       |
 
 `useTheme()` devolve o tema atual: escopo forçado (`<ThemeScope scheme="dark">`, usado no Modo
 Balcão) > preferência do usuário (`useThemePreference`, persistida; "Sistema / Claro / Escuro") >
-esquema do sistema. A fonte Inter (`@expo-google-fonts/inter`) carrega em `app/_layout.tsx` antes
+esquema do sistema. A fonte Plus Jakarta Sans (`@expo-google-fonts/plus-jakarta-sans`, a da landing aprovada) carrega em `app/_layout.tsx` antes
 de esconder a tela de abertura.
 
 ### Logo

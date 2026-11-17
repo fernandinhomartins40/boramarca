@@ -58,3 +58,106 @@ body {
   color: var(--color-primary-text);
   text-decoration: underline;
 }
+
+/* Brand surfaces from the approved landing (Bora-Marca-Kit/05-referencias): kit colors only, mixed. */
+.bm-hero {
+  position: relative;
+  isolation: isolate;
+  background:
+    radial-gradient(
+      55% 75% at 72% 105%,
+      color-mix(in srgb, var(--color-brand-violeta) 70%, transparent),
+      transparent 70%
+    ),
+    radial-gradient(
+      45% 55% at 0% 0%,
+      color-mix(in srgb, var(--color-brand-violeta) 30%, transparent),
+      transparent 70%
+    ),
+    radial-gradient(
+      30% 40% at 100% 0%,
+      color-mix(in srgb, var(--color-brand-lima) 12%, transparent),
+      transparent 70%
+    ),
+    linear-gradient(
+      160deg,
+      color-mix(in srgb, var(--color-brand-grafite), var(--color-brand-violeta) 14%) 0%,
+      var(--color-brand-grafite) 55%
+    );
+}
+.bm-voz {
+  position: relative;
+  isolation: isolate;
+  background:
+    radial-gradient(
+      40% 60% at 85% 15%,
+      color-mix(in srgb, var(--color-brand-lima) 24%, transparent),
+      transparent 70%
+    ),
+    radial-gradient(
+      60% 80% at 0% 100%,
+      color-mix(in srgb, var(--color-brand-grafite) 45%, transparent),
+      transparent 70%
+    ),
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--color-brand-violeta), var(--color-brand-branco) 14%) 0%,
+      var(--color-brand-violeta) 45%,
+      color-mix(in srgb, var(--color-brand-violeta), var(--color-brand-grafite) 30%) 100%
+    );
+}
+.bm-cta {
+  position: relative;
+  isolation: isolate;
+  background:
+    radial-gradient(
+      50% 120% at 100% 50%,
+      color-mix(in srgb, var(--color-brand-violeta) 55%, transparent),
+      transparent 70%
+    ),
+    radial-gradient(
+      30% 80% at 0% 0%,
+      color-mix(in srgb, var(--color-brand-lima) 10%, transparent),
+      transparent 70%
+    ),
+    var(--color-brand-grafite);
+}
+/* Fine grid that fades out: depth without new colors. */
+.bm-hero::before,
+.bm-voz::before,
+.bm-cta::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background-image:
+    linear-gradient(
+      color-mix(in srgb, var(--color-brand-branco) 6%, transparent) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--color-brand-branco) 6%, transparent) 1px,
+      transparent 1px
+    );
+  background-size: 44px 44px;
+  mask-image: radial-gradient(70% 70% at 30% 30%, black, transparent 80%);
+}
+/* Soft lavender card: violet tint over the surface, follows light/dark. */
+.bm-soft {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--color-brand-violeta) 10%, var(--color-surface)) 0%,
+    var(--color-surface-alt) 100%
+  );
+  border: 1px solid color-mix(in srgb, var(--color-brand-violeta) 12%, transparent);
+}
+.bm-glass {
+  background: color-mix(in srgb, var(--color-brand-branco) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-brand-branco) 16%, transparent);
+  backdrop-filter: blur(12px);
+}
+.bm-lift {
+  box-shadow: 0 24px 48px -28px color-mix(in srgb, var(--color-brand-violeta) 55%, transparent);
+}

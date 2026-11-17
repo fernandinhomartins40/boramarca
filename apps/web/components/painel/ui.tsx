@@ -1,5 +1,30 @@
 'use client';
 
+import {
+  ChartColumn,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  Clock,
+  CreditCard,
+  CalendarDays,
+  Download,
+  House,
+  LogOut,
+  Menu,
+  MessageCircle,
+  Pencil,
+  Phone,
+  Plus,
+  Search,
+  Sparkles,
+  User,
+  Users,
+  Utensils,
+  Volume2,
+  X,
+  type LucideIcon,
+} from 'lucide-react';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { ApiCallError } from '@/lib/api';
 import { initials } from './format';
@@ -64,7 +89,7 @@ export function Loading({ label = 'Carregando…' }: { label?: string }) {
 export function ErrorBox({ message, onRetry }: { message: string; onRetry?: () => void }) {
   return (
     <div role="alert" className={`${card} flex flex-wrap items-center gap-lg p-xl`}>
-      <p className="flex-1 text-body text-danger">{message}</p>
+      <p className="min-w-[14rem] flex-1 text-body text-danger">{message}</p>
       {onRetry && (
         <button type="button" className={btnOutline} onClick={onRetry}>
           Tentar de novo
@@ -143,47 +168,34 @@ export function PageHeader({
   );
 }
 
-/** Line icons drawn like the kit's 06-icones-interface set (24px grid, 1.7 stroke, currentColor). */
-const PATHS = {
-  home: 'M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z',
-  chart: 'M5 20v-6M12 20V5M19 20v-9',
-  team: 'M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM2 21v-1a6 6 0 0 1 12 0v1M16 3.5a4 4 0 0 1 0 7.5M22 21v-1a6 6 0 0 0-4-5.6',
-  user: 'M12 12a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9zM4 21v-1a7 7 0 0 1 14 0v1',
-  card: 'M3 6h18v13H3zM3 10h18M7 15h4',
-  calendar: 'M3 5h18v16H3zM16 3v4M8 3v4M3 11h18',
-  chat: 'M4 5h16v11H9l-5 4z',
-  sparkle: 'M12 3l2 6 6 2-6 2-2 6-2-6-6-2 6-2z',
-  check: 'M5 12l5 5 9-10',
-  close: 'M6 6l12 12M18 6L6 18',
-  left: 'M15 5l-7 7 7 7',
-  right: 'M9 5l7 7-7 7',
-  download: 'M12 4v11M7 10l5 5 5-5M5 20h14',
-  search: 'M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM16 16l5 5',
-  plus: 'M12 5v14M5 12h14',
-  speaker: 'M4 9h4l5-4v14l-5-4H4zM17 9a4 4 0 0 1 0 6M19.5 6.5a8 8 0 0 1 0 11',
-  phone:
-    'M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z',
-  clock: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 7v5l3 2',
-  logout: 'M15 4h4v16h-4M10 8l-4 4 4 4M6 12h11',
-  lunch: 'M7 3v8M5 3v5a2 2 0 0 0 4 0V3M7 11v10M17 3c-2 0-3 3-3 7h3v11',
-  edit: 'M4 20h4L19 9l-4-4L4 16zM14 6l4 4',
-  menu: 'M4 7h16M4 12h16M4 17h16',
-} as const;
-export type IconName = keyof typeof PATHS;
+/** Interface icons: lucide-react, one library for the whole site and panel (the app uses lucide-react-native). */
+const ICONS = {
+  home: House,
+  chart: ChartColumn,
+  team: Users,
+  user: User,
+  card: CreditCard,
+  calendar: CalendarDays,
+  chat: MessageCircle,
+  sparkle: Sparkles,
+  check: Check,
+  close: X,
+  left: ChevronLeft,
+  right: ChevronRight,
+  download: Download,
+  search: Search,
+  plus: Plus,
+  speaker: Volume2,
+  phone: Phone,
+  clock: Clock,
+  logout: LogOut,
+  lunch: Utensils,
+  edit: Pencil,
+  menu: Menu,
+} satisfies Record<string, LucideIcon>;
+export type IconName = keyof typeof ICONS;
 
 export function Icon({ name, className = 'size-5' }: { name: IconName; className?: string }) {
-  return (
-    <svg
-      aria-hidden
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={1.7}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={`shrink-0 ${className}`}
-    >
-      <path d={PATHS[name]} />
-    </svg>
-  );
+  const C = ICONS[name];
+  return <C aria-hidden strokeWidth={1.75} className={`shrink-0 ${className}`} />;
 }
