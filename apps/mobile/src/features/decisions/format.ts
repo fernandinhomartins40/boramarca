@@ -5,6 +5,7 @@ import {
   type DecisionType,
   type DecisionView,
 } from '@boramarca/shared';
+import { salonClock } from '@/utils/timezone';
 
 /** "agora", "há 2 min", "há 3 h", "12/11". */
 export function timeAgo(iso: string, now: Date): string {
@@ -12,7 +13,7 @@ export function timeAgo(iso: string, now: Date): string {
   if (min < 1) return 'agora';
   if (min < 60) return `há ${min} min`;
   if (min < 24 * 60) return `há ${Math.floor(min / 60)} h`;
-  return format(new Date(iso), 'dd/MM');
+  return format(salonClock(iso), 'dd/MM');
 }
 
 export interface Deadline {
@@ -62,7 +63,7 @@ export function resolutionSummary(d: DecisionView): {
   subtitle: string;
   clientNotified: boolean;
 } {
-  const at = format(new Date(d.updatedAt), 'HH:mm');
+  const at = format(salonClock(d.updatedAt), 'HH:mm');
   if (d.status === 'expired' || d.resolvedVia === 'timeout') {
     return { title: d.question, subtitle: DECISION_VIA_LABELS.timeout, clientNotified: true };
   }

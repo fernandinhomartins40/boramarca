@@ -19,6 +19,7 @@ import {
 } from './db/schema';
 import { zonedToUtc } from './lib/time';
 import { FakePush } from './modules/devices/push';
+import { WS_UNAUTHORIZED } from './modules/realtime';
 import { connectedPro, WEBHOOK_SECRET } from './test/connected';
 import { captureSender, randomPhone, testConfig, testGateway } from './test/helpers';
 
@@ -136,6 +137,23 @@ describe('DELETE /me', () => {
     expect(rec!.completedAt).not.toBeNull();
     // The old session cannot refresh anymore and /me is gone.
     expect((await t.call('GET', '/v1/me')).statusCode).toBe(404);
+  });
+
+  it('B8: closes the open WebSockets of the account right away, not when the token expires', async () => {
+    const t = await connectedPro(app, gw);
+    const ws = await app.injectWS(`/v1/realtime?token=${t.token}`);
+    const closed = new Promise<{ code: number; reason: string }>((resolve) =>
+      ws.on('close', (code: number, reason: Buffer) => resolve({ code, reason: String(reason) })),
+    );
+    const code = await deleteCode(app, t.phone);
+    const r = await t.call('DELETE', '/v1/me', { code, origin: 'app' });
+    expect(r.statusCode, r.body).toBe(200);
+    // the access token is valid for 15 min: only the deletion can close it this fast
+    const timeout = new Promise<'still open'>((res) => setTimeout(() => res('still open'), 5_000));
+    expect(await Promise.race([closed, timeout])).toEqual({
+      code: WS_UNAUTHORIZED,
+      reason: 'account deleted',
+    });
   });
 
   it('an owner with a team must transfer or delete the whole space', async () => {

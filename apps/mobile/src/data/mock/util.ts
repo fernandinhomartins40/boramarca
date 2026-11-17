@@ -1,4 +1,4 @@
-import { format } from 'date-fns';
+import { atMinute, dateOnly } from '@/utils/agenda';
 import { DataError } from '../errors';
 
 /**
@@ -40,18 +40,15 @@ export const nowIso = () => new Date().toISOString();
 export const minutesAgo = (m: number) => new Date(Date.now() - m * 60_000).toISOString();
 export const minutesFromNow = (m: number) => new Date(Date.now() + m * 60_000).toISOString();
 
-/** ISO instant for `HH:mm` on today + `dayOffset`, in the device timezone (demo data). */
+/** ISO instant for `HH:mm` on today + `dayOffset`, in the salon timezone (demo data). */
 export function todayAt(hhmm: string, dayOffset = 0): string {
   const [h, m] = hhmm.split(':').map(Number);
-  const d = new Date();
-  d.setDate(d.getDate() + dayOffset);
-  d.setHours(h ?? 0, m ?? 0, 0, 0);
-  return d.toISOString();
+  return atMinute(today(), dayOffset * 24 * 60 + (h ?? 0) * 60 + (m ?? 0));
 }
 
-/** `YYYY-MM-DD` of an ISO instant in the device timezone. */
-export const dateOf = (iso: string) => format(new Date(iso), 'yyyy-MM-dd');
-export const today = () => format(new Date(), 'yyyy-MM-dd');
+/** `YYYY-MM-DD` of an ISO instant in the salon timezone. */
+export const dateOf = (iso: string) => dateOnly(iso);
+export const today = () => dateOnly(new Date());
 
 /** EntityBase fields. */
 export const base = (id: string, createdMinutesAgo = 60 * 24 * 30) => ({

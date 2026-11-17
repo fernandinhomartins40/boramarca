@@ -28,7 +28,7 @@ proporção 2,17:1, acima do limite 2:1 do Google Play).
 ## 0. Antes de tudo (fora das lojas)
 
 1. **Site no ar** com `https://boramarca.com.br/privacidade`, `/termos`, `/excluir-conta` e
-   `/contato` (`docs/pendencias/D4.md`, item 1). As lojas abrem essas URLs na revisão.
+   `/contato` (`docs/PENDENCIAS-HUMANAS.md`, item 1). As lojas abrem essas URLs na revisão.
 2. **API de produção no ar** em `https://api.boramarca.com.br` (e, se for usar o perfil `preview`,
    uma homologação em `https://api-homolog.boramarca.com.br`; se o endereço for outro, troque no
    `eas.json`).
@@ -70,7 +70,7 @@ eas init                  # cria o projeto no Expo e mostra o projectId
 4. **Variáveis secretas** (se houver): a chave da Picovoice vai como variável de ambiente do EAS
    (`eas env:create --environment production --name EXPO_PUBLIC_PICOVOICE_ACCESS_KEY --value ...
    --visibility sensitive`) e os arquivos `.ppn`/`.pv` em `assets/wakeword/`
-   (`docs/pendencias/D2.md`). Sem eles o app funciona com o botão **Falar**.
+   (`docs/PENDENCIAS-HUMANAS.md`, item 10). Sem eles o app funciona com o botão **Falar**.
 5. Confira o que será publicado: `EAS_BUILD_PROFILE=production EXPO_PUBLIC_API_URL=https://api.boramarca.com.br npx expo config --type introspect`
    deve mostrar `aps-environment: production`, os textos de permissão em pt-BR e o
    `privacyManifests`, e **não** mostrar `UIBackgroundModes` nem `usesCleartextTraffic`.

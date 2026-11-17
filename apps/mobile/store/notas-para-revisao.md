@@ -8,7 +8,7 @@ Onde colar:
   telefone, senha = código, e o texto em inglês abaixo em **Notas**.
 
 **Antes de colar**, troque `<REVIEW_PHONE>` e `<REVIEW_OTP>` pelos valores de `REVIEW_PHONE` e
-`REVIEW_OTP` do `infra/.env.prod` (escolhidos pelo dono, ver `docs/pendencias/D4.md` item 2). O
+`REVIEW_OTP` do `infra/.env.prod` (escolhidos pelo dono, ver `docs/PENDENCIAS-HUMANAS.md`, item 6). O
 número **não pode** ser de nenhum profissional real: a API recusa o código fixo se o número já
 pertencer a uma conta comum. A conta funciona sem SMS e sem WhatsApp de verdade, e é recriada
 sozinha se o revisor excluí-la.
@@ -102,5 +102,5 @@ Balcão, depois de explicar. Sem localização, contatos, fotos, rastreamento ou
 
 ## Alexa (certificação da skill)
 
-A mesma conta serve para a certificação da skill na Amazon (`docs/pendencias/C4.md`): vincular a
+A mesma conta serve para a certificação da skill na Amazon (`docs/PENDENCIAS-HUMANAS.md`, item 16): vincular a
 conta pela página de login da skill com o telefone **<REVIEW_PHONE>** e o código **<REVIEW_OTP>**.

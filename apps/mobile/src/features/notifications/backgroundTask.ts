@@ -1,5 +1,5 @@
 // Sim/Não on a decision notification with the Android app closed: only a task registered with
-// expo-task-manager runs JS then (docs/pendencias/C2.md, item 1). Wired by agent D2.
+// expo-task-manager runs JS then (docs/PENDENCIAS-HUMANAS.md, item 11). Wired by agent D2.
 import * as TaskManager from 'expo-task-manager';
 import * as Notifications from 'expo-notifications';
 import { runDecisionNotificationTask } from './decisionNotifications';

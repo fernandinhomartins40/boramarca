@@ -1,5 +1,5 @@
 // Config plugin: bundles the Picovoice files of the "Ei, Bora Marca" wake word, when present in
-// assets/wakeword/ (generated in the Picovoice Console; docs/pendencias/D2.md):
+// assets/wakeword/ (generated in the Picovoice Console; docs/PENDENCIAS-HUMANAS.md, item 10):
 //   ei-bora-marca_android.ppn, ei-bora-marca_ios.ppn  (keyword, one per platform, Portuguese)
 //   porcupine_params_pt.pv                            (Portuguese model)
 // Android: copied to app/src/main/assets (Porcupine resolves paths relative to it).

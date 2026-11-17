@@ -2,20 +2,23 @@ import { useEffect } from 'react';
 import { View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useSegments } from 'expo-router';
-import { format, isToday } from 'date-fns';
+import { format } from 'date-fns';
 import { CirclePause } from 'lucide-react-native';
 import { Banner } from '@/components';
 import { useSession } from '@/features/auth/session';
 import { isWhatsAppDown, useWhatsAppStore, useWhatsAppWatcher } from '@/features/whatsapp/store';
 import '@/features/whatsapp/simulations';
 import { useTheme } from '@/theme';
+import { dateOnly } from '@/utils/agenda';
+import { salonClock } from '@/utils/timezone';
 import { refreshAi, useAiStore } from './aiStore';
 
 /** "IA pausada até 15:30 — …", "até 15/11 às 00:00", or with no end. */
 export function pausedLabel(until: string | null): string {
   if (!until) return 'IA pausada — você está respondendo tudo.';
-  const d = new Date(until);
-  const when = isToday(d) ? format(d, 'HH:mm') : format(d, "dd/MM 'às' HH:mm");
+  const d = salonClock(until);
+  const today = dateOnly(until) === dateOnly(new Date());
+  const when = today ? format(d, 'HH:mm') : format(d, "dd/MM 'às' HH:mm");
   return `IA pausada até ${when} — você está respondendo tudo.`;
 }
 

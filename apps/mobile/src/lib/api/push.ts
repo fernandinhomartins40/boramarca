@@ -14,7 +14,7 @@ import { getNotificationPermission } from '@/features/notifications';
  * already granted. Docs checked on 15/11/2026 (expo-notifications 58.1, getExpoPushTokenAsync):
  * needs a physical device and the EAS `projectId`; the call reaches Expo's servers, so it can fail
  * offline — every failure is swallowed and retried on the next foreground.
- * Without `extra.eas.projectId` (no `eas init` yet) nothing is registered: docs/pendencias/D1.md.
+ * Without `extra.eas.projectId` (no `eas init` yet) nothing is registered: docs/PENDENCIAS-HUMANAS.md, item 5.
  */
 export async function registerPushDevice(): Promise<RegisteredDevice | null> {
   if (Platform.OS !== 'android' && Platform.OS !== 'ios') return null;

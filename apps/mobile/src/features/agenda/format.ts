@@ -1,8 +1,12 @@
 import { addDays, differenceInCalendarDays, format } from 'date-fns';
 import { ptBR } from 'date-fns/locale/pt-BR';
 import type { DateOnly } from '@boramarca/shared';
+import { salonClock } from '@/utils/timezone';
 
-/** pt-BR labels of the agenda screens. All take `now` so tests are deterministic. */
+/**
+ * pt-BR labels of the agenda screens, in the salon timezone (utils/timezone.ts). All take `now` so
+ * tests are deterministic.
+ */
 
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 export const parseDate = (date: DateOnly) => new Date(`${date}T12:00:00`);
@@ -12,7 +16,7 @@ export const firstName = (name: string) => name.trim().split(/\s+/)[0] ?? name;
 export function dayTitle(date: DateOnly, now: Date): string {
   const d = parseDate(date);
   const long = format(d, "EEEE, d 'de' MMMM", { locale: ptBR }).replace('-feira', '');
-  const diff = differenceInCalendarDays(d, now);
+  const diff = differenceInCalendarDays(d, salonClock(now));
   if (diff === 0) return `Hoje, ${long}`;
   if (diff === 1) return `Amanhã, ${long}`;
   if (diff === -1) return `Ontem, ${long}`;
@@ -23,18 +27,18 @@ export const shiftDate = (date: DateOnly, days: number): DateOnly =>
   format(addDays(parseDate(date), days), 'yyyy-MM-dd');
 
 /** "14:00". */
-export const clock = (iso: string) => format(new Date(iso), 'HH:mm');
+export const clock = (iso: string) => format(salonClock(iso), 'HH:mm');
 
 /** "16h" / "16h30" (messages to clients). */
 export function spokenTime(iso: string): string {
-  const d = new Date(iso);
+  const d = salonClock(iso);
   return d.getMinutes() ? format(d, "H'h'mm") : format(d, "H'h'");
 }
 
 /** "hoje" · "amanhã" · "quinta, 14/11". */
 export function dayPhrase(iso: string, now: Date): string {
-  const d = new Date(iso);
-  const diff = differenceInCalendarDays(d, now);
+  const d = salonClock(iso);
+  const diff = differenceInCalendarDays(d, salonClock(now));
   if (diff === 0) return 'hoje';
   if (diff === 1) return 'amanhã';
   return format(d, 'EEEE, dd/MM', { locale: ptBR }).replace('-feira', '');
@@ -51,7 +55,7 @@ export function money(cents: number): string {
 
 /** "há 18 dias" · "hoje" · "ontem". */
 export function daysAgo(iso: string, now: Date): string {
-  const n = differenceInCalendarDays(now, new Date(iso));
+  const n = differenceInCalendarDays(salonClock(now), salonClock(iso));
   if (n <= 0) return 'hoje';
   if (n === 1) return 'ontem';
   return `há ${n} dias`;

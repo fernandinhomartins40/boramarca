@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
-import { AppState, Platform, View } from 'react-native';
+import { AppState, Linking, Platform, View } from 'react-native';
 import { router } from 'expo-router';
 import * as Battery from 'expo-battery';
 import * as Device from 'expo-device';
@@ -35,12 +35,19 @@ import {
   BRAND_NAME,
   BRAND_STEPS,
   SETUP_DONE_SPEECH,
+  NOTIF_DENIED_TEXT,
   SOUND_TEST_SPEECH,
+  balcaoMissing,
+  balcaoMissingText,
   brandOf,
   levelBars,
 } from '@/features/balcao/native/setup';
 import { NativeSpeechToText } from '@/features/balcao/native/speechToText';
-import { getNotificationPermission, requestNotificationPermission } from '@/features/notifications';
+import {
+  getNotificationPermission,
+  requestNotificationPermission,
+  type NotificationPermission,
+} from '@/features/notifications';
 import { useTheme } from '@/theme';
 
 const isAndroid = Platform.OS === 'android';
@@ -187,7 +194,7 @@ function Checklist({ onContinue }: { onContinue: () => void }) {
   const t = useTheme();
   const [mic, setMic] = useState<Status>('unknown');
   const [speech, setSpeech] = useState<Status>('unknown');
-  const [notif, setNotif] = useState<Status>('unknown');
+  const [notif, setNotif] = useState<NotificationPermission | null>(null);
   const [battery, setBattery] = useState<Status>('unknown');
   const [speaker, setSpeaker] = useState<string | null>(null);
   const [soundTested, setSoundTested] = useState(false);
@@ -208,8 +215,8 @@ function Checklist({ onContinue }: { onContinue: () => void }) {
         .then((p) => setSpeech(p.granted ? 'ok' : 'todo'))
         .catch(() => setSpeech('todo'));
     getNotificationPermission()
-      .then((p) => setNotif(p === 'granted' ? 'ok' : 'todo'))
-      .catch(() => setNotif('todo'));
+      .then(setNotif)
+      .catch(() => setNotif('undetermined'));
     if (isAndroid)
       Battery.isBatteryOptimizationEnabledAsync()
         .then((on) => setBattery(on ? 'todo' : 'ok'))
@@ -256,8 +263,7 @@ function Checklist({ onContinue }: { onContinue: () => void }) {
   }
 
   async function askNotif() {
-    const p = await requestNotificationPermission().catch(() => 'denied' as const);
-    setNotif(p === 'granted' ? 'ok' : 'todo');
+    setNotif(await requestNotificationPermission().catch(() => 'denied' as const));
   }
 
   async function openBattery() {
@@ -273,6 +279,8 @@ function Checklist({ onContinue }: { onContinue: () => void }) {
   }
 
   const bars = level === null ? 0 : levelBars(level, BARS);
+  // without the speech module (web) there is no microphone to ask for, as in app/balcao/index.tsx
+  const missing = balcaoMissing({ android: isAndroid, mic: !recognition || mic === 'ok', notif });
 
   return (
     <View style={{ gap: t.spacing.md }}>
@@ -322,10 +330,20 @@ function Checklist({ onContinue }: { onContinue: () => void }) {
 
       <Step
         icon={Bell}
-        title={notif === 'ok' ? 'Notificações ativadas' : 'Notificações'}
-        text="Você recebe avisos de agendamentos, alterações e pedidos de confirmação."
-        status={notif}
-        action={{ label: 'Ativar', onPress: askNotif }}
+        title={notif === 'granted' ? 'Notificações ativadas' : 'Notificações'}
+        text={
+          notif === 'denied'
+            ? NOTIF_DENIED_TEXT
+            : isAndroid
+              ? 'Mostram que o balcão está ouvindo, com o botão Pausar, e trazem os pedidos de confirmação.'
+              : 'Você recebe avisos de agendamentos, alterações e pedidos de confirmação.'
+        }
+        status={notif === null ? 'unknown' : notif === 'granted' ? 'ok' : 'todo'}
+        action={
+          notif === 'denied'
+            ? { label: 'Abrir ajustes', onPress: () => void Linking.openSettings() }
+            : { label: 'Ativar', onPress: askNotif }
+        }
       />
 
       {isAndroid ? (
@@ -410,14 +428,19 @@ function Checklist({ onContinue }: { onContinue: () => void }) {
         </Card>
       ) : null}
 
-      <Button label="Continuar" size="lg" onPress={onContinue} />
+      {missing.length ? (
+        <Text color="danger" align="center" accessibilityLiveRegion="polite">
+          {balcaoMissingText(missing)}
+        </Text>
+      ) : null}
+      <Button label="Continuar" size="lg" disabled={missing.length > 0} onPress={onContinue} />
     </View>
   );
 }
 
 // ---- page 2: final test ("Vamos testar?")
 
-function FinalTest() {
+function FinalTest({ onMissing }: { onMissing: () => void }) {
   const t = useTheme();
   const [state, setState] = useState<'waiting' | 'listening' | 'missed' | 'ok'>('waiting');
   const realWake = hasRealWakeWord();
@@ -449,7 +472,22 @@ function FinalTest() {
     }
   }
 
-  function activate() {
+  async function activate() {
+    // checked again: the permissions can be revoked while this page is open
+    const [mic, notif] = await Promise.all([
+      recognition
+        ? recognition
+            .getMicrophonePermissionsAsync()
+            .then((p) => p.granted)
+            .catch(() => false)
+        : true,
+      getNotificationPermission().catch(() => 'denied' as const),
+    ]);
+    const missing = balcaoMissing({ android: isAndroid, mic, notif });
+    if (missing.length) {
+      showToast(balcaoMissingText(missing), 'danger');
+      return onMissing();
+    }
     // starts the Android service now, while the app is in the foreground (Android 14+ rule)
     balcaoSession
       .open()
@@ -579,7 +617,7 @@ export default function ConfigurarBalcaoScreen() {
             subtitle="Fale a frase abaixo, como se estivesse no seu balcão de atendimento."
             onBack={back}
           />
-          <FinalTest />
+          <FinalTest onMissing={() => setPage('checklist')} />
         </>
       )}
     </Screen>

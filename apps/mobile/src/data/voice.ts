@@ -9,6 +9,7 @@ import { mockConversations } from './conversations';
 import { mockDecisions } from './decisions';
 import { firstName } from './mock/fixtures';
 import { nowIso, reply } from './mock/util';
+import { salonClock } from '@/utils/timezone';
 
 /**
  * Voice commands of Modo Balcão (prompt 07; text recognized on the device). Owner: agent C3;
@@ -20,7 +21,7 @@ export interface VoiceData {
 }
 
 const hhmm = (iso: string) => {
-  const d = new Date(iso);
+  const d = salonClock(iso);
   return `${d.getHours()}h${d.getMinutes() ? String(d.getMinutes()).padStart(2, '0') : ''}`;
 };
 

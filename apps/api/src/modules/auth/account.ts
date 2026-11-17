@@ -20,6 +20,7 @@ import {
   whatsappSessions,
 } from '../../db/schema';
 import type { Core } from '../../lib/core';
+import { realtimeEvent } from '../../lib/event-bus';
 import { AppError, notFound } from '../../lib/errors';
 import { reminderJobId } from '../agenda/reminders';
 import { offerJobId } from '../waitlist/service';
@@ -89,6 +90,10 @@ export async function eraseProfessional(core: Core, professionalId: string) {
     await tx.delete(otpCodes).where(eq(otpCodes.phone, p.phone));
     await tx.delete(leads).where(eq(leads.phone, p.phone));
   });
+  // Open WebSockets of this professional close now, not when their token expires (B8).
+  await core.bus
+    .publish(professionalId, realtimeEvent('account.deleted', {}))
+    .catch((err: unknown) => core.log.warn({ err }, 'account.deleted not published'));
   return p;
 }
 

@@ -12,6 +12,7 @@ import {
   MessageCircle,
   MessageSquareText,
   Moon,
+  Speaker,
   User,
   Volume2,
   Wrench,
@@ -162,6 +163,12 @@ export default function AjustesScreen() {
           title="Voz e horário de silêncio"
           subtitle="Velocidade da fala e quando o balcão não fala"
           onPress={() => router.push('/ajustes/voz')}
+        />
+        <ListItem
+          icon={Speaker}
+          title="Alexa"
+          subtitle="Vínculo da conta e avisos em voz alta"
+          onPress={() => router.push('/ajustes/alexa')}
         />
       </Section>
 

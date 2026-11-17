@@ -156,6 +156,7 @@ describe('misc contracts', () => {
       'conversation.updated',
       'whatsapp.status',
       'ai.status',
+      'account.deleted',
     ]);
     const e = RealtimeEvent.parse({
       type: 'ai.status',

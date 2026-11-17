@@ -1,5 +1,6 @@
 import { DEV_TOOLS_ENABLED } from '@/dev/flags';
 import { mockAccount, type AccountData } from './account';
+import { mockAlexa, type AlexaData } from './alexa';
 import { mockAgenda, type AgendaData } from './agenda';
 import { api } from '@/lib/api';
 import { createApiData } from './api';
@@ -14,7 +15,7 @@ import { mockWaitlist, type WaitlistData } from './waitlist';
 import { mockWhatsApp, type WhatsAppData } from './whatsapp';
 
 export type { AccountData, AgendaData, AuthData, ClientsData, ConversationsData, DecisionsData };
-export type { DevicesData, ProfileData, VoiceData, WaitlistData, WhatsAppData };
+export type { AlexaData, DevicesData, ProfileData, VoiceData, WaitlistData, WhatsAppData };
 export { DataError } from './errors';
 
 /** Everything the screens can ask for. Screens import `data` and never know the source. */
@@ -30,6 +31,7 @@ export interface DataLayer {
   voice: VoiceData;
   account: AccountData;
   devices: DevicesData;
+  alexa: AlexaData;
 }
 
 export type DataSource = 'mock' | 'api';
@@ -46,6 +48,7 @@ export const mockData: DataLayer = {
   voice: mockVoice,
   account: mockAccount,
   devices: mockDevices,
+  alexa: mockAlexa,
 };
 
 /**

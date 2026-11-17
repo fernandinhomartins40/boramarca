@@ -12,7 +12,7 @@ const MICROPHONE_TEXT =
 const SPEECH_TEXT =
   'O Bora Marca transforma o que você fala em texto para entender seus pedidos e responder decisões por voz no Modo Balcão, e para ditar mensagens nas conversas.';
 
-// Filled by a person after `eas init` (docs/pendencias/E1.md). Not a secret. Without it the app does
+// Filled by a person after `eas init` (docs/PENDENCIAS-HUMANAS.md, item 5). Not a secret. Without it the app does
 // not register for push (src/lib/api/push.ts) and `eas build` asks to link the project.
 const EAS_PROJECT_ID: string | undefined = undefined;
 

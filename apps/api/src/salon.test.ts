@@ -87,7 +87,19 @@ describe('owner panel with the demo seed', () => {
     const day = (await get(`/v1/salon/day?date=${TODAY}`)).json();
     expect(day.columns).toHaveLength(4);
     expect(day.columns[0].professional.name).toBe('Marina Costa');
-    expect(day.pendingDecisions).toHaveLength(1);
+    // Marina's fit-in and the reschedule of Camila's client (a team member's decision)
+    expect(
+      day.pendingDecisions.map((d: { professionalId: string; type: string }) => [
+        d.professionalId,
+        d.type,
+      ]),
+    ).toEqual(
+      expect.arrayContaining([
+        [seeded.pros.marina!.id, 'encaixe'],
+        [seeded.pros.camila!.id, 'remarcar'],
+      ]),
+    );
+    expect(day.pendingDecisions).toHaveLength(2);
 
     const team = (await get('/v1/salon/team')).json();
     expect(team.items.map((m: { name: string }) => m.name)).toEqual([

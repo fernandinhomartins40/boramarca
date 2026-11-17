@@ -50,6 +50,7 @@ import {
   atMinute,
   type TimelineRow,
 } from '@/utils/agenda';
+import { salonClock } from '@/utils/timezone';
 import { DelaySheet } from './DelaySheet';
 import { clock, dayTitle, firstName, money, plural, shiftDate } from './format';
 import { useLoad, useRefreshOnFocus } from './useLoad';
@@ -304,7 +305,7 @@ export function AgendaScreen() {
       <BottomSheet visible={picking} onClose={() => setPicking(false)} title="Escolher o dia">
         <DayStrip
           value={date}
-          from={new Date(now.getTime() - 7 * 86_400_000)}
+          from={salonClock(now.getTime() - 7 * 86_400_000)}
           days={45}
           onChange={(d) => {
             setDate(d);

@@ -2,13 +2,14 @@ import { Pressable, ScrollView } from 'react-native';
 import { addDays, differenceInCalendarDays, format } from 'date-fns';
 import { ptBR } from 'date-fns/locale/pt-BR';
 import { useTheme } from '@/theme';
+import { salonClock } from '@/utils/timezone';
 import { Text } from './Text';
 
 export interface DayStripProps {
   /** Selected day, `YYYY-MM-DD`. */
   value: string;
   onChange: (date: string) => void;
-  /** First day shown (default today). */
+  /** First day shown, a `salonClock` date (default today in the salon). */
   from?: Date;
   /** How many days (default 14). */
   days?: number;
@@ -17,9 +18,9 @@ export interface DayStripProps {
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 /** Horizontal day picker: "Hoje / Qui, 24", "Amanhã / Sex, 25", "Sáb, / 26" (reference 05). */
-export function DayStrip({ value, onChange, from = new Date(), days = 14 }: DayStripProps) {
+export function DayStrip({ value, onChange, from = salonClock(), days = 14 }: DayStripProps) {
   const t = useTheme();
-  const today = new Date();
+  const today = salonClock();
   return (
     <ScrollView
       horizontal

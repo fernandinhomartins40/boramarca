@@ -14,7 +14,7 @@ injeta as mesmas funções de voz e de decisão que já usa nas rotas `/voice/co
 | `createVoiceMonkeyClient({ token })`, `createDecisionAnnouncer(...)`               | Anúncio proativo pelo Voice Monkey v3 (`POST https://api-v3.voicemonkey.io/announce`).                                                           |
 | `parseAuthorizeRequest`, `authorizeRedirectUrl`, `verifyPkce`, `parseTokenRequest` | Vínculo de conta (OAuth 2.0, código de autorização + PKCE): validação do que a Amazon envia.                                                     |
 | `readAlexaConfig()`                                                                | Lê as variáveis de `.env.example` com Zod.                                                                                                       |
-| `skill/interaction-model.pt-BR.json`, `skill/skill.json`                           | Modelo de interação pt-BR e manifesto, para colar no console (ver `docs/pendencias/C4.md`).                                                      |
+| `skill/interaction-model.pt-BR.json`, `skill/skill.json`                           | Modelo de interação pt-BR e manifesto, para colar no console (ver `docs/PENDENCIAS-HUMANAS.md`, item 16).                                        |
 
 ## Intents
 

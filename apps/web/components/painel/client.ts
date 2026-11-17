@@ -105,7 +105,9 @@ export function createClient(
       if (!res.ok) {
         // 5xx/network: keep the session, the next call retries.
         if (res.status >= 500) throw await toError(res);
-        return null;
+        // Another tab may have rotated the refresh token first: use what it saved.
+        const saved = store.get();
+        return saved && saved.refreshToken !== current.refreshToken ? saved : null;
       }
       const tokens = AuthTokens.parse(await res.json());
       store.set(tokens);

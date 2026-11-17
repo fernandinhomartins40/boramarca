@@ -173,7 +173,7 @@ Para trocar: `apps/mobile/.env` com `EXPO_PUBLIC_DATA_SOURCE=api` e reinicie o M
 - **Push:** `usePushRegistration()` (`src/lib/api/push.ts`), montado em `app/_layout.tsx`: depois do
   login, se a permissão de notificação **já** foi dada, pega o token Expo e faz `POST /devices`. Não
   pede permissão. Sem `extra.eas.projectId` não registra nada (pendência em
-  `docs/pendencias/D1.md`).
+  `docs/PENDENCIAS-HUMANAS.md`, item 5).
 - **Roteiro contra a API local:** com a API e o seed rodando,
   `EXPO_PUBLIC_API_URL=http://localhost:3333 npx tsx scripts/roteiro-api.ts` (login da Marina,
   agenda, renovação de token, decisão com o evento pelo WebSocket, aparelho, e exclusão de uma conta
@@ -256,7 +256,7 @@ pt-BR do sistema via `expo-speech-recognition` (`speechToText.ts`), fala `expo-s
 volume de mídia (Android). Sem `EXPO_PUBLIC_PICOVOICE_ACCESS_KEY` (este é o nome lido pelo código em
 `src/features/balcao/native/index.ts` e usado no `.env.example`; o plano, seção 11, chama de
 `EXPO_PUBLIC_PICOVOICE_KEY`, nome antigo que não funciona) ou sem os arquivos de
-`assets/wakeword/` (gerados no console da Picovoice, ver `docs/pendencias/D2.md`), a palavra de
+`assets/wakeword/` (gerados no console da Picovoice, ver `docs/PENDENCIAS-HUMANAS.md`, item 10), a palavra de
 ativação continua simulada e a tela mostra **Falar**. Se o Porcupine falhar ao iniciar, ele também
 cai para o botão.
 
@@ -325,7 +325,7 @@ da palavra (para testar a palavra real), caixa Bluetooth pareada, celular no car
 
 `EXPO_PUBLIC_SITE_URL` = `https://boramarca.com.br` nos três. Nunca defina `EXPO_PUBLIC_DEV_TOOLS`
 em `preview` ou `production`. `extra.eas.projectId` só existe depois do `eas init` (constante
-`EAS_PROJECT_ID` no `app.config.ts`; `docs/pendencias/E1.md`).
+`EAS_PROJECT_ID` no `app.config.ts`; `docs/PENDENCIAS-HUMANAS.md`, item 5).
 
 **Configuração nativa para as lojas** (`app.config.ts`):
 

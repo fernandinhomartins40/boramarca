@@ -21,10 +21,11 @@ const realtime: FastifyPluginAsync = async (app) => {
       return;
     }
     const unsubscribe = app.bus.subscribe(professionalId, (event) => {
-      if (socket.readyState === socket.OPEN) socket.send(JSON.stringify(event));
+      // published by eraseProfessional on any instance (Redis bus): stop right away (B8)
+      if (event.type === 'account.deleted') socket.close(WS_UNAUTHORIZED, 'account deleted');
+      else if (socket.readyState === socket.OPEN) socket.send(JSON.stringify(event));
     });
-    // The session ends with its token (expired, or the account was deleted): the app reconnects
-    // with a fresh one.
+    // The session also ends with its token: the app reconnects with a fresh one.
     const expiry = setTimeout(
       () => socket.close(WS_UNAUTHORIZED, 'token expired'),
       Math.min(2 ** 31 - 1, Math.max(0, exp - Date.now())),

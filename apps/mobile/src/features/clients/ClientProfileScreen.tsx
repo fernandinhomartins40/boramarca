@@ -38,6 +38,7 @@ import { useLoad, useRefreshOnFocus } from '@/features/agenda/useLoad';
 import { preferenceLabel } from '@/features/waitlist/preference';
 import { AddToWaitlistSheet } from '@/features/waitlist/WaitlistSheets';
 import { useTheme } from '@/theme';
+import { salonClock } from '@/utils/timezone';
 
 function Stat({ icon, value, label }: { icon: ReactNode; value: string; label: string }) {
   const t = useTheme();
@@ -266,7 +267,7 @@ export function ClientProfileScreen({ id }: { id: string }) {
               )}
               <View style={{ flex: 1 }}>
                 <Text weight="medium">
-                  {format(new Date(a.startsAt), "EEE, d 'de' MMM", { locale: ptBR })} ·{' '}
+                  {format(salonClock(a.startsAt), "EEE, d 'de' MMM", { locale: ptBR })} ·{' '}
                   {clock(a.startsAt)}
                 </Text>
                 <Text variant="bodySmall" color="textMuted">

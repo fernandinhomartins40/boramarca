@@ -5,7 +5,7 @@
 #
 #   docker compose -f infra/docker-compose.prod.yml --env-file infra/.env.prod up -d --build
 #
-# Image versions are pinned (plan rule 8). First deploy: docs/pendencias/D4.md.
+# Image versions are pinned (plan rule 8). First deploy: docs/PENDENCIAS-HUMANAS.md (item 1) and docs/OPERACAO.md.
 name: boramarca-prod
 
 x-service: &service

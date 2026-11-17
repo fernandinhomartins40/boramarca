@@ -1,5 +1,7 @@
 # Revisão de segurança, LGPD e proteção do número — antes da publicação
 
+> Nota: os arquivos de `docs/pendencias/` citados abaixo foram consolidados em `docs/PENDENCIAS-HUMANAS.md` e removidos.
+
 Data: 2026-11-15. Escopo: `apps/api`, `packages/whatsapp`, `packages/ia`, `packages/alexa`
 (validação de requisição e OAuth), `infra/`, páginas `/privacidade`, `/termos`, `/excluir-conta`,
 `docs/pendencias/*.md`, histórico do git. Nenhum código foi alterado.
@@ -234,7 +236,7 @@ tudo. **Correção:** registrar o Swagger só fora de produção (ou atrás de a
 revogada ou apagada segue recebendo `message.created` (com texto) enquanto o socket estiver aberto.
 **Correção:** fechar o socket ao chegar o `exp` do token, e no evento de exclusão da conta.
 
-**Status: corrigido.** O WebSocket fecha com `4401` quando o access token expira (no máximo 15 min, o que também cobre a conta apagada). Não há aviso imediato na exclusão (precisaria de um evento entre instâncias). Teste: `security.test.ts` › "B8: closes the socket when the access token expires".
+**Status: corrigido.** O WebSocket fecha com `4401` quando o access token expira (no máximo 15 min). Na exclusão da conta o fechamento é imediato: `eraseProfessional` (`apps/api/src/modules/auth/account.ts`) publica o evento `account.deleted` no barramento de tempo real (Redis, chega a todas as instâncias da API) e a rota `/v1/realtime` fecha com `4401` os sockets daquele profissional, sem repassar o evento. Vale para a exclusão pelo app, pela web e para o membro removido pelo dono. Testes: `security.test.ts` › "B8: closes the socket when the access token expires" e `account.test.ts` › "B8: closes the open WebSockets of the account right away, not when the token expires".
 
 ### B9. O prazo esgotado manda mensagem ao cliente mesmo com a IA pausada ou a conversa assumida
 `apps/api/src/modules/decisions/service.ts` (`handleTimeout`, `handleExpire`) envia "Já te

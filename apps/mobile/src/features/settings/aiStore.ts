@@ -1,9 +1,10 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { addDays, startOfDay } from 'date-fns';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import type { AiStatus, IsoDateTime } from '@boramarca/shared';
 import { data } from '@/data';
+import { dateOnly } from '@/utils/agenda';
+import { salonInstant } from '@/utils/timezone';
 
 interface AiStore {
   aiEnabled: boolean;
@@ -48,7 +49,8 @@ export const PAUSE_LABELS: Record<PauseOption, string> = {
 /** End of a quick pause; null = "até eu voltar". */
 export function pauseUntil(option: PauseOption, now = new Date()): IsoDateTime | null {
   if (option === '1h') return new Date(now.getTime() + 60 * 60_000).toISOString();
-  if (option === 'tomorrow') return addDays(startOfDay(now), 1).toISOString();
+  // next midnight in the salon (minute 1440 of today)
+  if (option === 'tomorrow') return salonInstant(dateOnly(now), 24 * 60).toISOString();
   return null;
 }
 

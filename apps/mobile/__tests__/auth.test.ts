@@ -14,6 +14,7 @@ import {
 } from '@/features/settings/format';
 import { runSimulation } from '@/dev/simulations';
 import '@/features/whatsapp/simulations';
+import { atMinute } from '@/utils/agenda';
 
 jest.mock('expo-secure-store', () => {
   const store = new Map<string, string>();
@@ -62,9 +63,10 @@ it('formats and parses prices and weeks', () => {
 });
 
 it('quick pause ends in 1h, at midnight, or never', () => {
-  const now = new Date(2026, 10, 14, 15, 30);
-  expect(pauseUntil('1h', now)).toBe(new Date(2026, 10, 14, 16, 30).toISOString());
-  expect(pauseUntil('tomorrow', now)).toBe(new Date(2026, 10, 15).toISOString());
+  // salon time (America/Sao_Paulo): midnight is the salon's, not the phone's
+  const now = new Date(atMinute('2026-11-14', 15 * 60 + 30));
+  expect(pauseUntil('1h', now)).toBe(atMinute('2026-11-14', 16 * 60 + 30));
+  expect(pauseUntil('tomorrow', now)).toBe(atMinute('2026-11-15', 0));
   expect(pauseUntil('indefinitely', now)).toBeNull();
 });
 

@@ -1,6 +1,7 @@
 // Demo seed (plan section 16): "Espaço Aurora", Marina (owner, fisioterapia) and team, 12 clients
 // of Marina, today's agenda from the references (04-agenda, 05-agendamentos, 10-clientes,
-// 12-web-agenda) with two cancellations and a pending fit-in decision (Beatriz at 16h).
+// 12-web-agenda) with two cancellations and a pending fit-in decision (Beatriz at 16h), plus a
+// pending reschedule decision of Camila (team) for the owner panel.
 // Dates are relative to "today" in America/Sao_Paulo. Re-runnable: it replaces the demo salon.
 //
 // Login: phone +5511900000001 (Marina), code 123456 (outside production).
@@ -300,37 +301,80 @@ export async function seedDemo(db: Db, now = new Date()) {
     },
   ]);
 
+  /** Validated against the shared contract so the app/web can rely on it. */
+  async function pendingDecision(
+    decision: Omit<typeof t.aiDecisions.$inferInsert, 'deadlineAt'> & { deadlineAt: Date },
+  ) {
+    AiDecision.omit({ id: true, createdAt: true, updatedAt: true }).parse({
+      ...decision,
+      status: 'pending',
+      deadlineAt: decision.deadlineAt.toISOString(),
+      timeoutNotifiedAt: null,
+      resolvedVia: null,
+      resolvedOption: null,
+      resolvedText: null,
+    });
+    await db.insert(t.aiDecisions).values({ ...decision, status: 'pending' });
+  }
+
+  /** WhatsApp conversation: the client asks (`ask`), the AI holds (`hold`) `minutesAgo` ago. */
+  async function chat(
+    proKey: string,
+    clientId: string,
+    ask: string,
+    aiNote: string,
+    hold: string,
+    minutesAgo: number,
+  ) {
+    const [conv] = await db
+      .insert(t.conversations)
+      .values({
+        professionalId: pros[proKey]!.id,
+        clientId,
+        handler: 'ai',
+        unreadCount: 1,
+        lastMessageAt: minutes(now, -minutesAgo),
+      })
+      .returning();
+    const msgs = await db
+      .insert(t.messages)
+      .values([
+        {
+          conversationId: conv!.id,
+          direction: 'in',
+          author: 'client',
+          text: ask,
+          aiNote,
+          createdAt: minutes(now, -minutesAgo - 1),
+        },
+        {
+          conversationId: conv!.id,
+          direction: 'out',
+          author: 'ai',
+          text: hold,
+          createdAt: minutes(now, -minutesAgo),
+        },
+      ])
+      .returning();
+    return {
+      conversationId: conv!.id,
+      messages: msgs.map((msg) => ({
+        author: msg.author,
+        text: msg.text ?? '',
+        at: msg.createdAt.toISOString(),
+      })),
+    };
+  }
+
   // Beatriz asks for 16h on WhatsApp -> pending fit-in decision ("Beatriz pode vir às 16h?").
-  const [conv] = await db
-    .insert(t.conversations)
-    .values({
-      professionalId: pros.marina!.id,
-      clientId: m.beatriz,
-      handler: 'ai',
-      unreadCount: 1,
-      lastMessageAt: minutes(now, -2),
-    })
-    .returning();
-  const asked = await db
-    .insert(t.messages)
-    .values([
-      {
-        conversationId: conv!.id,
-        direction: 'in',
-        author: 'client',
-        text: 'Oi! Vi que vagou horário hoje. Consigo às 16h?',
-        aiNote: 'Entendi como: pedido de encaixe hoje às 16h',
-        createdAt: minutes(now, -3),
-      },
-      {
-        conversationId: conv!.id,
-        direction: 'out',
-        author: 'ai',
-        text: 'Vou ver aqui e já te falo!',
-        createdAt: minutes(now, -2),
-      },
-    ])
-    .returning();
+  const beatriz = await chat(
+    'marina',
+    m.beatriz,
+    'Oi! Vi que vagou horário hoje. Consigo às 16h?',
+    'Entendi como: pedido de encaixe hoje às 16h',
+    'Vou ver aqui e já te falo!',
+    2,
+  );
   const fitIn = {
     name: 'marcar' as const,
     arguments: {
@@ -339,19 +383,15 @@ export async function seedDemo(db: Db, now = new Date()) {
       isFitIn: true,
     },
   };
-  const decision = {
+  await pendingDecision({
     professionalId: pros.marina!.id,
-    conversationId: conv!.id,
+    conversationId: beatriz.conversationId,
     clientId: m.beatriz,
-    type: 'encaixe' as const,
+    type: 'encaixe',
     question: 'Beatriz pode vir às 16h?',
     context: {
       clientFirstName: 'Beatriz',
-      messages: asked.map((msg) => ({
-        author: msg.author,
-        text: msg.text ?? '',
-        at: msg.createdAt.toISOString(),
-      })),
+      messages: beatriz.messages,
       extra: { freedBy: 'Roberto cancelou' },
     },
     options: [
@@ -359,19 +399,8 @@ export async function seedDemo(db: Db, now = new Date()) {
       { id: 'nao', label: 'Não', action: null },
     ],
     proposedAction: fitIn,
-    status: 'pending' as const,
     deadlineAt: minutes(now, 8),
-  };
-  // Validate against the shared contract so the app/web can rely on it.
-  AiDecision.omit({ id: true, createdAt: true, updatedAt: true }).parse({
-    ...decision,
-    deadlineAt: decision.deadlineAt.toISOString(),
-    timeoutNotifiedAt: null,
-    resolvedVia: null,
-    resolvedOption: null,
-    resolvedText: null,
   });
-  await db.insert(t.aiDecisions).values(decision);
 
   // ---- Team (12-web-agenda): a few clients and today's appointments each.
   const team: [string, [string, string, AppointmentStatus][]][] = [
@@ -404,9 +433,44 @@ export async function seedDemo(db: Db, now = new Date()) {
       ],
     ],
   ];
+  const teamAppt: Record<string, { clientId: string; appointmentId: string }> = {};
   for (const [key, list] of team)
-    for (const [name, time, status] of list)
-      await appointment(key, await client(key, name), at(time), status);
+    for (const [name, time, status] of list) {
+      const clientId = await client(key, name);
+      teamAppt[name] = {
+        clientId,
+        appointmentId: await appointment(key, clientId, at(time), status),
+      };
+    }
+
+  // Camila's client asks to move 14h -> 17h: a pending decision of the team in the owner panel.
+  const pedroM = teamAppt['Pedro Martins']!;
+  const pedroChat = await chat(
+    'camila',
+    pedroM.clientId,
+    'Oi, Camila! Consigo passar a sessão de hoje das 14h para as 17h?',
+    'Entendi como: remarcar hoje das 14h para as 17h',
+    'Vou confirmar com a Camila e já te falo!',
+    5,
+  );
+  const move = {
+    name: 'remarcar' as const,
+    arguments: { appointmentId: pedroM.appointmentId, startsAt: at('17:00').toISOString() },
+  };
+  await pendingDecision({
+    professionalId: pros.camila!.id,
+    conversationId: pedroChat.conversationId,
+    clientId: pedroM.clientId,
+    type: 'remarcar',
+    question: 'Pedro quer passar das 14h para as 17h. Posso remarcar?',
+    context: { clientFirstName: 'Pedro', messages: pedroChat.messages },
+    options: [
+      { id: 'sim', label: 'Sim', action: move },
+      { id: 'nao', label: 'Não', action: null },
+    ],
+    proposedAction: move,
+    deadlineAt: minutes(now, 12),
+  });
 
   await db.insert(t.auditLog).values({
     professionalId: pros.marina!.id,

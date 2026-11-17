@@ -108,6 +108,25 @@ describe('createClient', () => {
     expect(onExpired).toHaveBeenCalledOnce();
   });
 
+  it('a rejected refresh uses the tokens another tab saved meanwhile', async () => {
+    const store = memStore(tokens('old'));
+    const onExpired = vi.fn();
+    const fetchMock = vi.fn(async (url: RequestInfo | URL, init?: RequestInit) => {
+      if (String(url).endsWith('/auth/refresh')) {
+        store.value = tokens('other-tab'); // the other tab won the rotation
+        return Response.json({ statusCode: 401, code: 'UNAUTHORIZED', message: 'x' }, { status: 401 });
+      }
+      const auth = new Headers(init?.headers).get('authorization');
+      return auth === 'Bearer other-tab'
+        ? Response.json(plan)
+        : Response.json({ statusCode: 401, code: 'UNAUTHORIZED', message: 'x' }, { status: 401 });
+    });
+    const api = createClient(store, { fetchImpl: fetchMock, onExpired, now: () => NOW });
+    await expect(api.call(routes.salon.plan)).resolves.toEqual(plan);
+    expect(store.value?.accessToken).toBe('other-tab');
+    expect(onExpired).not.toHaveBeenCalled();
+  });
+
   it('surfaces the API error message (e.g. 403 for a non-owner)', async () => {
     const fetchMock = vi.fn(async () =>
       Response.json(

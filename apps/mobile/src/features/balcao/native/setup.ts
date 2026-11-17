@@ -79,3 +79,36 @@ export function levelBars(volume: number, bars: number): number {
 
 export const SETUP_DONE_SPEECH = 'Tudo certo! Estou pronta para trabalhar.';
 export const SOUND_TEST_SPEECH = 'Oi! É assim que eu falo com você no balcão.';
+
+/** What still blocks "Continuar" and "Ativar Modo Balcão". */
+export type BalcaoMissing = 'mic' | 'notif';
+
+/**
+ * The microphone always; on Android also the notification: the microphone service shows the fixed
+ * "Bora Marca está ouvindo"/"Pausar" notification, and Android 13+ hides it without
+ * POST_NOTIFICATIONS (the microphone would stay open with no sign of it).
+ */
+export function balcaoMissing(p: {
+  android: boolean;
+  mic: boolean;
+  notif: 'granted' | 'undetermined' | 'denied' | null;
+}): BalcaoMissing[] {
+  const out: BalcaoMissing[] = [];
+  if (!p.mic) out.push('mic');
+  if (p.android && p.notif !== 'granted') out.push('notif');
+  return out;
+}
+
+export function balcaoMissingText(missing: readonly BalcaoMissing[]): string {
+  const what =
+    missing.length === 2
+      ? 'o microfone e as notificações'
+      : missing[0] === 'mic'
+        ? 'o microfone'
+        : 'as notificações';
+  return `Para ativar o Modo Balcão, permita ${what}.`;
+}
+
+/** Shown when the notification was denied for good: only the system settings can turn it on. */
+export const NOTIF_DENIED_TEXT =
+  'As notificações estão desligadas. Sem elas, o celular não mostra que o balcão está ouvindo nem o botão Pausar. Toque em Abrir ajustes, entre em Notificações e ligue.';

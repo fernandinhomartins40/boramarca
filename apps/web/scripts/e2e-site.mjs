@@ -13,7 +13,7 @@ const phone = process.argv[2];
 assert.ok(phone && phone !== '+5511900000001', 'pass a fresh test phone (not the demo one)');
 const local = phone.replace(/^\+55/, '');
 
-// NO_CORS=1 works around an API whose CORS still lacks DELETE (see docs/pendencias/C5.md).
+// NO_CORS=1 works around an API whose CORS still lacks DELETE (see docs/PENDENCIAS-HUMANAS.md).
 const browser = await chromium.launch({
   channel: 'chrome',
   args: process.env.NO_CORS ? ['--disable-web-security'] : [],

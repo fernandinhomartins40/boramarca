@@ -30,6 +30,8 @@ export const RealtimeEvent = z.discriminatedUnion('type', [
   event('conversation.updated', z.object({ conversation: ConversationView })),
   event('whatsapp.status', WhatsAppStatusResponse),
   event('ai.status', AiStatus),
+  /** The account was erased: the API closes this professional's sockets with 4401 right away. */
+  event('account.deleted', z.object({})),
 ]);
 export type RealtimeEvent = z.infer<typeof RealtimeEvent>;
 export type RealtimeEventType = RealtimeEvent['type'];

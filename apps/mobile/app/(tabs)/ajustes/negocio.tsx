@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 import { KeyboardAvoidingView, Platform, View } from 'react-native';
 import { router } from 'expo-router';
-import { addDays, format, isValid, parse } from 'date-fns';
+import { format, isValid, parse } from 'date-fns';
 import { ChevronDown, ChevronUp, MapPin, Plus, TreePalm, Trash, User } from 'lucide-react-native';
 import {
   PROFESSIONS,
@@ -38,6 +38,7 @@ import { ServiceForm, ServiceRow } from '@/features/settings/ServiceForm';
 import { useLoad } from '@/features/settings/useLoad';
 import { WeekEditor } from '@/features/settings/WeekEditor';
 import { useTheme } from '@/theme';
+import { salonClock, salonInstant } from '@/utils/timezone';
 
 const load = () =>
   Promise.all([
@@ -314,9 +315,11 @@ function TimeOffSection({ initial }: { initial: TimeOff[] }) {
     setSaving(true);
     setError(null);
     try {
+      // the whole day in the salon, whatever the phone's timezone
+      const ymd = format(date, 'yyyy-MM-dd');
       const created = await data.profile.createTimeOff({
-        startsAt: date.toISOString(),
-        endsAt: addDays(date, 1).toISOString(),
+        startsAt: salonInstant(ymd, 0).toISOString(),
+        endsAt: salonInstant(ymd, 24 * 60).toISOString(),
         reason: reason.trim() || null,
       });
       setItems((cur) => [...cur, created].sort((a, b) => a.startsAt.localeCompare(b.startsAt)));
@@ -348,7 +351,7 @@ function TimeOffSection({ initial }: { initial: TimeOff[] }) {
             <ListItem
               key={x.id}
               icon={TreePalm}
-              title={format(new Date(x.startsAt), 'dd/MM/yyyy')}
+              title={format(salonClock(x.startsAt), 'dd/MM/yyyy')}
               subtitle={x.reason ?? undefined}
               chevron={false}
               right={

@@ -7,7 +7,7 @@ import type { Db } from '../../db/client';
 import { otpCodes } from '../../db/schema';
 import { AppError } from '../../lib/errors';
 
-/** Delivers the 6-digit code to the phone. Real SMS provider: see docs/pendencias/A1.md. */
+/** Delivers the 6-digit code to the phone. Real SMS provider: see docs/PENDENCIAS-HUMANAS.md, item 3. */
 export interface OtpSender {
   send(phone: string, code: string, purpose: OtpPurpose): Promise<void>;
 }

@@ -6,6 +6,7 @@ import { uid } from '@/data/mock/util';
 import { ConversationScreen } from './ConversationScreen';
 import { ConversationsScreen } from './ConversationsScreen';
 import { listTime, nextLabel } from './format';
+import { atMinute, dateOnly } from '@/utils/agenda';
 
 jest.mock(
   'react-native-safe-area-context',
@@ -24,11 +25,9 @@ const beatriz = uid(0x303); // audio + AI note
 const carlos = uid(0x304); // taken over ("Com você")
 
 it('formats times', () => {
-  const today = new Date();
-  today.setHours(16, 0, 0, 0);
-  expect(nextLabel(today.toISOString())).toBe('Próximo: hoje às 16h');
-  today.setHours(9, 30);
-  expect(listTime(today.toISOString())).toBe('09:30');
+  const today = dateOnly(new Date());
+  expect(nextLabel(atMinute(today, 16 * 60))).toBe('Próximo: hoje às 16h');
+  expect(listTime(atMinute(today, 9 * 60 + 30))).toBe('09:30');
   expect(listTime(null)).toBe('');
 });
 

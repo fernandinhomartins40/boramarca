@@ -254,7 +254,7 @@ OAuth e headers de autenticação (no nível de cima e um abaixo) e tira a query
 
 `infra/docker/api.Dockerfile` (contexto = raiz do repositório): `pnpm deploy --prod` da API, roda
 como `node` com `node --import tsx src/server.ts`; migrações no serviço `migrate` do
-`infra/docker-compose.prod.yml`. Ver `docs/pendencias/D4.md`.
+`infra/docker-compose.prod.yml`. Ver `docs/OPERACAO.md`.
 
 ## Variáveis
 

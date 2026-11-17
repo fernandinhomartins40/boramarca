@@ -197,7 +197,7 @@ export async function reportInBackground(outcome: ResponseOutcome): Promise<void
 
 /**
  * Background task body (Android runs it for action taps with the app in background or closed).
- * Wiring needs `expo-task-manager` — see docs/pendencias/C2.md.
+ * Wiring needs `expo-task-manager` — see docs/PENDENCIAS-HUMANAS.md, item 11.
  */
 export async function runDecisionNotificationTask(
   payload: Notifications.NotificationTaskPayload,

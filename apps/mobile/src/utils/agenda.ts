@@ -7,12 +7,13 @@ import {
   type DateOnly,
   type WorkingHours,
 } from '@boramarca/shared';
+import { salonClock, salonInstant } from './timezone';
 
 /**
  * Agenda rules (prompt 04): no overlap, inside working hours, outside lunch, a slot is free only if
  * the total duration of the chosen services fits. Plus the timeline and "Agora / Próximo" of the
- * Agenda do dia (prompt 03). Pure functions over minutes of the day, in the device timezone (the
- * same convention as the mock; the API works in the salon timezone). Tests: agenda.test.ts.
+ * Agenda do dia (prompt 03). Pure functions over minutes of the day, in the salon timezone (as the
+ * API; utils/timezone.ts), whatever the phone's timezone. Tests: agenda.test.ts.
  */
 
 /** [start, end) in minutes since midnight. */
@@ -39,18 +40,15 @@ const ACTIVE: readonly AppointmentStatus[] = ACTIVE_APPOINTMENT_STATUSES;
 export const toMinutes = (hhmm: string) => Number(hhmm.slice(0, 2)) * 60 + Number(hhmm.slice(3, 5));
 
 export function minuteOfDay(at: string | Date): number {
-  const d = typeof at === 'string' ? new Date(at) : at;
+  const d = salonClock(at);
   return d.getHours() * 60 + d.getMinutes();
 }
 
-export const dateOnly = (at: string | Date): DateOnly =>
-  format(typeof at === 'string' ? new Date(at) : at, 'yyyy-MM-dd');
+/** Salon calendar date of an instant ("hoje" is `dateOnly(new Date())`). */
+export const dateOnly = (at: string | Date): DateOnly => format(salonClock(at), 'yyyy-MM-dd');
 
-/** ISO instant for minute `m` of `date` (device timezone). */
-export function atMinute(date: DateOnly, m: number): string {
-  const [y, mo, d] = date.split('-').map(Number);
-  return new Date(y!, mo! - 1, d!, Math.floor(m / 60), m % 60).toISOString();
-}
+/** ISO instant for minute `m` of `date` (salon timezone). */
+export const atMinute = (date: DateOnly, m: number): string => salonInstant(date, m).toISOString();
 
 /** "14:00". */
 export const hhmm = (m: number) =>

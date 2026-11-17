@@ -1,5 +1,6 @@
 import { routes } from '@boramarca/shared';
 import type { ApiClient } from '@/lib/api/client';
+import { setSalonTimezone } from '@/utils/timezone';
 import type { DataLayer } from './index';
 
 /**
@@ -40,7 +41,12 @@ export function createApiData(api: ApiClient): DataLayer {
       },
     },
     profile: {
-      getMe: () => api.call(r.auth.me),
+      // both answers carry the salon timezone, which every date on screen uses (utils/timezone)
+      async getMe() {
+        const me = await api.call(r.auth.me);
+        setSalonTimezone(me.salon.timezone);
+        return me;
+      },
       updateMe: (body) => api.call(r.auth.updateMe, { body }),
       // no GET /ai/settings: the same fields come in GET /me
       async getAiSettings() {
@@ -85,7 +91,11 @@ export function createApiData(api: ApiClient): DataLayer {
       createKitLead: (body) => api.call(r.salon.kitLead, { body }),
     },
     agenda: {
-      getDay: (date) => api.call(r.agenda.day, { query: { date } }),
+      async getDay(date) {
+        const day = await api.call(r.agenda.day, { query: { date } });
+        setSalonTimezone(day.timezone);
+        return day;
+      },
       getSlots: (date, serviceIds) =>
         api.call(r.agenda.slots, { query: { date, serviceIds: serviceIds.join(',') } }),
       getAppointment: (appointmentId) => api.call(r.agenda.get, id(appointmentId)),
@@ -135,5 +145,10 @@ export function createApiData(api: ApiClient): DataLayer {
       summary: (moment) => api.call(r.voice.summary, { query: { moment } }),
     },
     devices,
+    alexa: {
+      getSettings: () => api.call(r.alexa.settings),
+      updateSettings: (body) => api.call(r.alexa.updateSettings, { body }),
+      unlink: () => api.call(r.alexa.unlink),
+    },
   };
 }
