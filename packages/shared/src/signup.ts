@@ -25,12 +25,20 @@ export const SignupEmail = z
 
 // ---- POST /auth/signup/request: the code goes to the e-mail. If the phone or the e-mail already
 // has an account, the e-mail gets a "você já tem conta" notice instead (same answer here).
+/** Web login password (the app logs in by SMS). */
+export const Password = z
+  .string()
+  .min(8, 'A senha precisa de pelo menos 8 caracteres')
+  .max(128, 'Senha longa demais');
+
 export const SignupRequestBody = z.object({
   name: z.string().trim().min(1, 'Seu nome').max(120),
   salonName: z.string().trim().min(1, 'O nome do seu negócio').max(120),
   profession: Profession,
   phone: BrMobileE164,
   email: SignupEmail,
+  /** Web sign-up sets it (login by e-mail + password); the app signs up without one. */
+  password: Password.optional(),
 });
 export type SignupRequestBody = z.infer<typeof SignupRequestBody>;
 
@@ -56,3 +64,24 @@ export type EmailCodeRequestBody = z.infer<typeof EmailCodeRequestBody>;
 // ---- POST /auth/email-code/verify: never creates an account.
 export const EmailCodeVerifyBody = z.object({ phone: BrMobileE164, code: OtpCodeValue });
 export type EmailCodeVerifyBody = z.infer<typeof EmailCodeVerifyBody>;
+
+// ---- POST /auth/password/login: e-mail (confirmed) + password, the web panel login (no SMS cost).
+// Wrong e-mail or password give the same 400 INVALID_CREDENTIALS.
+export const PasswordLoginBody = z.object({
+  email: SignupEmail,
+  password: z.string().min(1, 'Informe a senha').max(128),
+});
+export type PasswordLoginBody = z.infer<typeof PasswordLoginBody>;
+
+// ---- POST /auth/password/reset/request: 6-digit code to the e-mail (create or reset the
+// password). Same answer whether or not the e-mail has an account.
+export const PasswordResetRequestBody = z.object({ email: SignupEmail });
+export type PasswordResetRequestBody = z.infer<typeof PasswordResetRequestBody>;
+
+// ---- POST /auth/password/reset: code + new password; logs in.
+export const PasswordResetBody = z.object({
+  email: SignupEmail,
+  code: OtpCodeValue,
+  password: Password,
+});
+export type PasswordResetBody = z.infer<typeof PasswordResetBody>;

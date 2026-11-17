@@ -9,6 +9,7 @@ const form = (over: Record<string, string> = {}) => {
     profession: 'manicure',
     phone: '(11) 91234-5678',
     email: ' Joana@Exemplo.com ',
+    password: 'segredo123',
     ...over,
   };
   for (const [k, x] of Object.entries(v)) f.set(k, x);
@@ -26,13 +27,14 @@ describe('parseSignup', () => {
         profession: 'manicure',
         phone: '+5511912345678',
         email: 'joana@exemplo.com',
+        password: 'segredo123',
       },
     });
   });
   it('points at each wrong field', () => {
-    const r = parseSignup(form({ phone: '1133334444', email: 'x', profession: '', name: '' }));
+    const r = parseSignup(form({ phone: '1133334444', email: 'x', profession: '', name: '', password: 'curta' }));
     expect(r.ok).toBe(false);
     if (!r.ok)
-      expect(Object.keys(r.errors).sort()).toEqual(['email', 'name', 'phone', 'profession']);
+      expect(Object.keys(r.errors).sort()).toEqual(['email', 'name', 'password', 'phone', 'profession']);
   });
 });

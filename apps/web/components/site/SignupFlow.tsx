@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useState, type FormEvent } from 'react';
 import {
+  Password,
   PROFESSION_LABELS,
   PROFESSIONS,
   routes,
@@ -17,12 +18,14 @@ import { btn, input } from './ui';
 /** Validates the sign-up form with the shared schema; returns the body or per-field errors. */
 export function parseSignup(form: FormData) {
   const get = (k: string) => String(form.get(k) ?? '');
-  const parsed = SignupRequestBody.safeParse({
+  // The web always sets a password (login by e-mail + password); the app signs up without one.
+  const parsed = SignupRequestBody.extend({ password: Password }).safeParse({
     name: get('name'),
     salonName: get('salonName'),
     profession: get('profession'),
     phone: toE164(get('phone')),
     email: get('email'),
+    password: get('password'),
   });
   if (parsed.success) return { ok: true as const, body: parsed.data };
   const errors = fieldErrors(parsed.error);
@@ -179,6 +182,25 @@ export function SignupFlow() {
           autoComplete="email"
           className={input}
           defaultValue={body?.email}
+        />
+      </Field>
+      <Field
+        id="password"
+        label="Crie uma senha"
+        error={errors.password}
+        hint="Pelo menos 8 caracteres. Você entra no painel com o e-mail e esta senha."
+      >
+        <input
+          {...describe(
+            'password',
+            errors.password,
+            'Pelo menos 8 caracteres. Você entra no painel com o e-mail e esta senha.',
+          )}
+          name="password"
+          type="password"
+          autoComplete="new-password"
+          className={input}
+          defaultValue={body?.password}
         />
       </Field>
       {formError && (

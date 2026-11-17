@@ -215,3 +215,51 @@ describe('login by e-mail code', () => {
     expect(p!.phoneVerifiedAt).toBeTruthy();
   });
 });
+
+describe('web login by e-mail + password', () => {
+  it('sign-up with a password logs in; wrong password and unknown e-mail get the same 400', async () => {
+    const f = form({ password: 'segredo123' });
+    await post('/auth/signup/request', f);
+    await post('/auth/signup/verify', { email: f.email, code: await codeIn(f.email) });
+    const [p] = await app.db.select().from(professionals).where(eq(professionals.phone, f.phone));
+    expect(p!.passwordHash).toMatch(/^scrypt\$/);
+    const ok = await post('/auth/password/login', {
+      email: f.email.toUpperCase(),
+      password: 'segredo123',
+    });
+    expect(ok.statusCode, ok.body).toBe(200);
+    expect(ok.json()).toMatchObject({ accessToken: expect.any(String), isNewUser: false });
+    const wrong = await post('/auth/password/login', { email: f.email, password: 'outrasenha' });
+    const unknown = await post('/auth/password/login', { email: email(), password: 'segredo123' });
+    expect([wrong.statusCode, unknown.statusCode]).toEqual([400, 400]);
+    expect(wrong.json().code).toBe('INVALID_CREDENTIALS');
+    expect(unknown.json()).toEqual(wrong.json());
+  });
+
+  it('an account without a password creates one with the e-mail code, then logs in', async () => {
+    const f = form();
+    await post('/auth/signup/request', f);
+    await post('/auth/signup/verify', { email: f.email, code: await codeIn(f.email) });
+    expect(
+      (await post('/auth/password/login', { email: f.email, password: 'novasenha1' })).statusCode,
+    ).toBe(400);
+    expect((await post('/auth/password/reset/request', { email: f.email })).statusCode).toBe(200);
+    const code = await codeIn(f.email);
+    expect(
+      (await post('/auth/password/reset', { email: f.email, code, password: 'curta' })).statusCode,
+    ).toBe(400);
+    const r = await post('/auth/password/reset', { email: f.email, code, password: 'novasenha1' });
+    expect(r.statusCode, r.body).toBe(200);
+    expect(
+      (await post('/auth/password/login', { email: f.email, password: 'novasenha1' })).statusCode,
+    ).toBe(200);
+    // The code works once; an unknown e-mail gets the same answer and no mail.
+    expect(
+      (await post('/auth/password/reset', { email: f.email, code, password: 'outra12345' }))
+        .statusCode,
+    ).toBe(400);
+    const nobody = email();
+    expect((await post('/auth/password/reset/request', { email: nobody })).statusCode).toBe(200);
+    expect(sent.some((m) => m.to === nobody)).toBe(false);
+  });
+});

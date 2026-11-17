@@ -185,6 +185,8 @@ export const professionals = pgTable(
     /** sha256 of the single-use confirmation token (the token itself is never stored). */
     emailTokenHash: text('email_token_hash').unique(),
     emailTokenExpiresAt: ts('email_token_expires_at'),
+    /** scrypt hash (modules/auth/password.ts) for the web login by e-mail + password; null = none yet. */
+    passwordHash: text('password_hash'),
     /** null = phone not proven (e-mail sign-up): set by an SMS code or the WhatsApp pairing. */
     phoneVerifiedAt: ts('phone_verified_at'),
     /** null = team invite not accepted yet: set when the person first logs in with their code. */

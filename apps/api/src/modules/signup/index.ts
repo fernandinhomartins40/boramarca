@@ -14,6 +14,7 @@ import {
 import { professionals, salons } from '../../db/schema';
 import { AppError } from '../../lib/errors';
 import { maskEmail } from '../../lib/mail/mailer';
+import { hashPassword, verifyPassword } from '../auth/password';
 import { route } from '../../lib/route';
 import {
   DEV_OTP,
@@ -22,7 +23,9 @@ import {
   OTP_MAX_FAILURES_PER_WINDOW,
 } from '../auth/otp';
 
-type Kind = 'signup' | 'login';
+type Kind = 'signup' | 'login' | 'reset';
+/** What the sign-up code keeps until verify: the form, with the password already hashed. */
+type PendingSignup = Omit<SignupRequestBody, 'password'> & { passwordHash?: string };
 const DECOY_DOMAINS = ['gmail.com', 'hotmail.com', 'outlook.com', 'yahoo.com.br', 'icloud.com'];
 const invalid = () => new AppError(400, 'OTP_INVALID', 'Código errado. Confira e tente de novo.');
 const tooMany = () =>
@@ -68,15 +71,19 @@ export function emailCodes(app: FastifyInstance) {
     return code;
   }
 
-  /** Checks and spends the code; returns what was stored with it. Throws pt-BR AppErrors. */
-  async function consume<T>(kind: Kind, dest: string, code: string): Promise<T> {
-    // Same failure window as the SMS code for a phone (one budget per destination).
+  /** Failure budget per destination (codes and passwords), same window as the SMS code. */
+  async function budget(dest: string) {
     const failKey = `otp:fail:${createHmac('sha256', config.JWT_ACCESS_SECRET).update(dest).digest('hex')}`;
     if ((Number(await redis.get(failKey)) || 0) >= OTP_MAX_FAILURES_PER_WINDOW) throw tooMany();
-    const fail = async () => {
+    return async () => {
       if ((await redis.incr(failKey)) === 1)
         await redis.expire(failKey, OTP_FAILURE_WINDOW_SECONDS);
     };
+  }
+
+  /** Checks and spends the code; returns what was stored with it. Throws pt-BR AppErrors. */
+  async function consume<T>(kind: Kind, dest: string, code: string): Promise<T> {
+    const fail = await budget(dest);
     const k = key(kind, dest);
     const rec = await redis.hgetall(k);
     if (!rec.hash) {
@@ -107,7 +114,7 @@ export function emailCodes(app: FastifyInstance) {
     return `${'abcdefghijklmnopqrstuvwxyz'[h[0]! % 26]}***@${DECOY_DOMAINS[h[1]! % DECOY_DOMAINS.length]}`;
   }
 
-  return { cooldown, issue, consume, decoy };
+  return { cooldown, issue, consume, decoy, budget };
 }
 
 const signup: FastifyPluginAsync = async (app) => {
@@ -151,7 +158,12 @@ const signup: FastifyPluginAsync = async (app) => {
       if (await taken(b.phone, b.email)) {
         await mail.send({ to: b.email, ...mailTemplates.accountExists() });
       } else {
-        const code = await codes.issue('signup', b.email, b);
+        const { password, ...rest } = b;
+        const pending: PendingSignup = {
+          ...rest,
+          ...(password && { passwordHash: await hashPassword(password) }),
+        };
+        const code = await codes.issue('signup', b.email, pending);
         await mail.send({
           to: b.email,
           ...mailTemplates.accessCode({ code, ttlMinutes, purpose: 'signup' }),
@@ -166,7 +178,7 @@ const signup: FastifyPluginAsync = async (app) => {
     app,
     r.verify,
     async (req) => {
-      const b = await codes.consume<SignupRequestBody>('signup', req.body.email, req.body.code);
+      const b = await codes.consume<PendingSignup>('signup', req.body.email, req.body.code);
       const exists = () =>
         new AppError(
           409,
@@ -194,6 +206,7 @@ const signup: FastifyPluginAsync = async (app) => {
             email: b.email,
             emailVerifiedAt: now,
             phoneVerifiedAt: null,
+            passwordHash: b.passwordHash ?? null,
           })
           .onConflictDoNothing({ target: professionals.phone })
           .returning();
@@ -247,6 +260,69 @@ const signup: FastifyPluginAsync = async (app) => {
         ...app.issueTokens({ professionalId: p.id, salonId: p.salonId, role: p.role }),
         isNewUser: false,
       };
+    },
+    limit,
+  );
+  /** Owners whose CONFIRMED e-mail is this one (sign-up keeps it to one; oldest first). */
+  const byEmail = (email: string) =>
+    db
+      .select()
+      .from(professionals)
+      .where(and(eq(professionals.email, email), isNotNull(professionals.emailVerifiedAt)))
+      .orderBy(professionals.createdAt);
+  const tokens = (p: typeof professionals.$inferSelect) => ({
+    ...app.issueTokens({ professionalId: p.id, salonId: p.salonId, role: p.role }),
+    isNewUser: false,
+  });
+
+  route(
+    app,
+    r.passwordLogin,
+    async (req) => {
+      const { email, password } = req.body;
+      const fail = await codes.budget(email);
+      const rows = (await byEmail(email)).filter((p) => p.passwordHash);
+      for (const p of rows) if (await verifyPassword(password, p.passwordHash!)) return tokens(p);
+      // Same work with no account, so the timing does not tell whether the e-mail exists.
+      if (rows.length === 0) await hashPassword(password);
+      await fail();
+      throw new AppError(400, 'INVALID_CREDENTIALS', 'E-mail ou senha errados.');
+    },
+    limit,
+  );
+
+  route(
+    app,
+    r.passwordResetRequest,
+    async (req) => {
+      const { email } = req.body;
+      await codes.cooldown('reset', email);
+      if ((await byEmail(email)).length > 0) {
+        const code = await codes.issue('reset', email);
+        const { mail, mailTemplates } = core();
+        await mail.send({
+          to: email,
+          ...mailTemplates.accessCode({ code, ttlMinutes, purpose: 'password' }),
+        });
+      }
+      return answer(maskEmail(email));
+    },
+    limit,
+  );
+
+  route(
+    app,
+    r.passwordReset,
+    async (req) => {
+      const { email, code, password } = req.body;
+      await codes.consume('reset', email, code);
+      const [p] = await byEmail(email);
+      if (!p) throw invalid();
+      await db
+        .update(professionals)
+        .set({ passwordHash: await hashPassword(password) })
+        .where(eq(professionals.id, p.id));
+      return tokens(p);
     },
     limit,
   );

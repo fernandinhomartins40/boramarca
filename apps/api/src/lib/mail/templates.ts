@@ -274,15 +274,22 @@ export function mailTemplates(ctx: MailContext) {
     },
 
     /** (e) 6-digit code: free sign-up or login by e-mail (works without SMS). */
-    accessCode: (v: { code: string; ttlMinutes: number; purpose: 'signup' | 'login' }) =>
+    accessCode: (v: { code: string; ttlMinutes: number; purpose: 'signup' | 'login' | 'password' }) =>
       render(ctx, {
         subject: `${v.code} é o seu código do Bora Marca`,
         preheader: `Digite ${v.code} no Bora Marca. Vale por ${v.ttlMinutes} minutos.`,
-        title: v.purpose === 'signup' ? 'Seu código para criar a conta' : 'Seu código para entrar',
+        title:
+          v.purpose === 'signup'
+            ? 'Seu código para criar a conta'
+            : v.purpose === 'password'
+              ? 'Seu código para criar uma nova senha'
+              : 'Seu código para entrar',
         body: [
           v.purpose === 'signup'
             ? 'Falta pouco! Digite este código no Bora Marca para criar sua conta e começar o teste grátis de 14 dias.'
-            : 'Digite este código no Bora Marca para entrar na sua conta.',
+            : v.purpose === 'password'
+              ? 'Digite este código no Bora Marca e escolha sua nova senha.'
+              : 'Digite este código no Bora Marca para entrar na sua conta.',
         ],
         facts: [['Código', v.code]],
         note: `O código vale por ${v.ttlMinutes} minutos e só funciona uma vez. Não compartilhe com ninguém: nossa equipe nunca pede este código. Se não foi você, ignore este e-mail.`,
