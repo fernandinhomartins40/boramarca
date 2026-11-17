@@ -161,3 +161,25 @@ body {
 .bm-lift {
   box-shadow: 0 24px 48px -28px color-mix(in srgb, var(--color-brand-violeta) 55%, transparent);
 }
+
+/* Panel "Mais" bottom sheet: slides up like a native sheet. */
+.bm-sheet[open] {
+  animation: bm-sheet-in 0.24s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.bm-sheet[open]::backdrop {
+  animation: bm-fade-in 0.24s ease-out;
+}
+@keyframes bm-sheet-in {
+  from {
+    transform: translateY(100%);
+  }
+}
+@keyframes bm-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+/* No grey flash on tap (mobile browsers): pressed states are styled instead. */
+body {
+  -webkit-tap-highlight-color: transparent;
+}

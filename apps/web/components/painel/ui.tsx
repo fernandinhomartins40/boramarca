@@ -9,6 +9,9 @@ import {
   CreditCard,
   CalendarDays,
   Download,
+  Globe,
+  LayoutGrid,
+  LifeBuoy,
   House,
   LogOut,
   Menu,
@@ -160,7 +163,7 @@ export function PageHeader({
   return (
     <div className="mb-xl flex flex-wrap items-end justify-between gap-lg">
       <div>
-        <h1 className="text-display text-text">{title}</h1>
+        <h1 className="text-title text-text md:text-display">{title}</h1>
         {subtitle && <p className="mt-xs text-body text-text-muted">{subtitle}</p>}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-md">{actions}</div>}
@@ -192,6 +195,9 @@ const ICONS = {
   lunch: Utensils,
   edit: Pencil,
   menu: Menu,
+  more: LayoutGrid,
+  help: LifeBuoy,
+  site: Globe,
 } satisfies Record<string, LucideIcon>;
 export type IconName = keyof typeof ICONS;
 

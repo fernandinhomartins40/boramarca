@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -8,6 +9,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react';
@@ -15,7 +17,7 @@ import { AUTOMATION_PAUSED_MESSAGE, routes, type MeResponse } from '@boramarca/s
 import { Logo } from '@/components/site/Logo';
 import { browserStore, createClient, type PanelClient } from './client';
 import { Login } from './Login';
-import { btnOutline, ErrorBox, errorText, Icon, Loading, type IconName } from './ui';
+import { Avatar, btnOutline, ErrorBox, errorText, Icon, Loading, type IconName } from './ui';
 
 interface Session {
   api: PanelClient;
@@ -113,6 +115,50 @@ export function PanelShell({ children }: { children: ReactNode }) {
   );
 }
 
+const isActive = (path: string, href: string) =>
+  href === '/painel' ? path === '/painel' : path.startsWith(href);
+const nav = (href: string) => NAV.find((n) => n.href === href)!;
+
+// Phone tab bar: two tabs on each side of "Hoje" (raised, in the middle); the last one opens "Mais".
+const TABS_LEFT = ['/painel/resultados', '/painel/clientes'];
+const TABS_RIGHT = ['/painel/equipe'];
+const MORE_LINKS: { href: string; label: string; hint: string; icon: IconName }[] = [
+  {
+    href: '/painel/plano',
+    label: 'Plano',
+    hint: 'Assinatura, uso e e-mail da conta',
+    icon: 'card',
+  },
+  { href: '/contato', label: 'Ajuda e contato', hint: 'Fale com o time Bora Marca', icon: 'help' },
+  { href: '/', label: 'Site Bora Marca', hint: 'Página inicial', icon: 'site' },
+];
+
+const pressable =
+  'transition-transform select-none active:scale-95 focus-visible:outline-2 focus-visible:outline-primary motion-reduce:transition-none';
+
+function Tab({ href, path }: { href: string; path: string }) {
+  const n = nav(href);
+  const active = isActive(path, href);
+  return (
+    <li>
+      <Link
+        href={href}
+        aria-current={active ? 'page' : undefined}
+        className={`flex h-16 flex-col items-center justify-center gap-xs rounded-md text-caption ${pressable} ${
+          active ? 'font-semibold text-primary-text' : 'text-text-muted'
+        }`}
+      >
+        <span
+          className={`flex h-7 w-12 items-center justify-center rounded-pill ${active ? 'bg-surface-alt' : ''}`}
+        >
+          <Icon name={n.icon} className="size-6" />
+        </span>
+        {n.label}
+      </Link>
+    </li>
+  );
+}
+
 function Layout({
   me,
   logout,
@@ -123,44 +169,55 @@ function Layout({
   children: ReactNode;
 }) {
   const path = usePathname();
+  const sheet = useRef<HTMLDialogElement>(null);
+  // Navigating from the "Mais" sheet closes it.
+  useEffect(() => sheet.current?.close(), [path]);
+  const moreActive = MORE_LINKS.some((m) => m.href.startsWith('/painel') && isActive(path, m.href));
+  const home = isActive(path, '/painel');
+
   return (
-    <div className="min-h-dvh lg:flex">
+    <div className="min-h-dvh md:flex">
       <a
         href="#conteudo"
-        className="sr-only focus:not-sr-only focus:fixed focus:top-sm focus:left-sm focus:z-20 focus:rounded-md focus:bg-primary focus:px-lg focus:py-sm focus:text-on-primary"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-sm focus:left-sm focus:z-50 focus:rounded-md focus:bg-primary focus:px-lg focus:py-sm focus:text-on-primary"
       >
         Pular para o conteúdo
       </a>
-      <aside className="flex flex-col gap-lg border-border bg-surface-alt/50 p-lg lg:sticky lg:top-0 lg:h-dvh lg:w-60 lg:shrink-0 lg:border-r lg:p-xl">
-        <div className="flex items-center justify-between gap-lg">
+
+      {/* Tablet: icon rail. Desktop: full sidebar. */}
+      <aside className="hidden border-r border-border bg-surface-alt/50 md:sticky md:top-0 md:flex md:h-dvh md:w-24 md:shrink-0 md:flex-col md:items-center md:gap-xl md:px-sm md:py-xl lg:w-64 lg:items-stretch lg:gap-lg lg:p-xl">
+        <Link href="/painel" aria-label="Bora Marca, início" className="lg:hidden">
+          <Image
+            src="/marca/simbolo-cor.svg"
+            alt=""
+            width={236}
+            height={304}
+            unoptimized
+            className="h-10 w-auto"
+          />
+        </Link>
+        <div className="hidden lg:block">
           <Logo className="h-8 w-auto" />
-          <button
-            type="button"
-            onClick={logout}
-            className="inline-flex items-center gap-xs rounded-md p-sm text-body-small text-text-muted hover:text-text lg:hidden"
-          >
-            <Icon name="logout" /> Sair
-          </button>
         </div>
         <p className="hidden truncate text-body-small font-semibold text-text lg:block lg:pt-lg">
           {me.salon.name}
         </p>
-        <nav aria-label="Painel" className="-mx-lg overflow-x-auto px-lg lg:mx-0 lg:px-0">
-          <ul className="flex gap-xs lg:flex-col">
+        <nav aria-label="Painel" className="w-full">
+          <ul className="flex flex-col gap-xs">
             {NAV.map((n) => {
-              const active = n.href === '/painel' ? path === '/painel' : path.startsWith(n.href);
+              const active = isActive(path, n.href);
               return (
                 <li key={n.href}>
                   <Link
                     href={n.href}
                     aria-current={active ? 'page' : undefined}
-                    className={`flex min-h-11 items-center gap-md rounded-md px-lg text-body whitespace-nowrap focus-visible:outline-2 focus-visible:outline-primary ${
+                    className={`flex flex-col items-center gap-xs rounded-md px-xs py-sm text-caption ${pressable} lg:min-h-11 lg:flex-row lg:gap-md lg:px-lg lg:py-0 lg:text-body ${
                       active
                         ? 'bg-primary font-semibold text-on-primary'
                         : 'text-text hover:bg-surface-alt'
                     }`}
                   >
-                    <Icon name={n.icon} />
+                    <Icon name={n.icon} className="size-6 lg:size-5" />
                     {n.label}
                   </Link>
                 </li>
@@ -168,6 +225,13 @@ function Layout({
             })}
           </ul>
         </nav>
+        <button
+          type="button"
+          onClick={logout}
+          className={`mt-auto flex flex-col items-center gap-xs rounded-md px-xs py-sm text-caption text-text-muted hover:text-text lg:hidden ${pressable}`}
+        >
+          <Icon name="logout" className="size-6" /> Sair
+        </button>
         <div className="mt-auto hidden rounded-lg border border-border bg-surface p-lg lg:block">
           <p className="truncate text-body-small font-semibold text-text">{me.professional.name}</p>
           <p className="text-caption text-text-muted">Dono(a) do espaço</p>
@@ -180,19 +244,146 @@ function Layout({
           </button>
         </div>
       </aside>
-      <main id="conteudo" className="min-w-0 flex-1 p-lg md:p-xl">
-        {me.billing?.automationPaused && (
-          <Link
-            href="/painel/plano"
-            role="alert"
-            className="mb-lg flex items-center gap-md rounded-md bg-warning px-lg py-md text-body font-semibold text-on-warning"
+
+      <div className="flex min-w-0 flex-1 flex-col">
+        {/* Phone: app bar. */}
+        <header className="sticky top-0 z-30 border-b border-border/60 bg-bg/85 pt-[env(safe-area-inset-top)] backdrop-blur-md md:hidden">
+          <div className="flex h-14 items-center gap-md px-lg">
+            <Image
+              src="/marca/simbolo-cor.svg"
+              alt=""
+              width={236}
+              height={304}
+              unoptimized
+              className="h-8 w-auto"
+            />
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-body font-semibold text-text">{me.salon.name}</p>
+              <p className="truncate text-caption text-text-muted">{me.professional.name}</p>
+            </div>
+            <Avatar name={me.professional.name} size="sm" />
+          </div>
+        </header>
+
+        <main
+          id="conteudo"
+          className="min-w-0 flex-1 p-lg pb-[calc(7rem+env(safe-area-inset-bottom))] md:p-xl"
+        >
+          {me.billing?.automationPaused && (
+            <Link
+              href="/painel/plano"
+              role="alert"
+              className="mb-lg flex items-center gap-md rounded-md bg-warning px-lg py-md text-body font-semibold text-on-warning"
+            >
+              <Icon name="sparkle" /> {AUTOMATION_PAUSED_MESSAGE}
+              <Icon name="right" className="ml-auto size-5" />
+            </Link>
+          )}
+          {children}
+        </main>
+      </div>
+
+      {/* Phone: bottom tab bar. */}
+      <nav
+        aria-label="Painel"
+        className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-surface/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-md md:hidden"
+      >
+        <ul className="mx-auto grid max-w-lg grid-cols-5 items-end px-xs">
+          {TABS_LEFT.map((h) => (
+            <Tab key={h} href={h} path={path} />
+          ))}
+          <li className="flex justify-center">
+            <Link
+              href="/painel"
+              aria-current={home ? 'page' : undefined}
+              className={`-mt-lg flex flex-col items-center gap-xs pb-sm text-caption ${pressable} ${
+                home ? 'font-semibold text-primary-text' : 'text-text-muted'
+              }`}
+            >
+              <span className="flex size-14 items-center justify-center rounded-pill bg-primary text-on-primary shadow-lg ring-4 ring-bg">
+                <Icon name="home" className="size-7" />
+              </span>
+              Hoje
+            </Link>
+          </li>
+          {TABS_RIGHT.map((h) => (
+            <Tab key={h} href={h} path={path} />
+          ))}
+          <li>
+            <button
+              type="button"
+              aria-haspopup="dialog"
+              onClick={() => sheet.current?.showModal()}
+              className={`flex h-16 w-full flex-col items-center justify-center gap-xs rounded-md text-caption ${pressable} ${
+                moreActive ? 'font-semibold text-primary-text' : 'text-text-muted'
+              }`}
+            >
+              <span
+                className={`flex h-7 w-12 items-center justify-center rounded-pill ${moreActive ? 'bg-surface-alt' : ''}`}
+              >
+                <Icon name="more" className="size-6" />
+              </span>
+              Mais
+            </button>
+          </li>
+        </ul>
+      </nav>
+
+      {/* "Mais": bottom sheet (native <dialog>: Esc, focus and the backdrop for free). */}
+      <dialog
+        ref={sheet}
+        aria-label="Mais opções"
+        onClick={(e) => {
+          if (e.target === e.currentTarget) e.currentTarget.close();
+        }}
+        className="bm-sheet m-0 mt-auto max-h-[85dvh] w-full max-w-none rounded-t-[1.75rem] bg-surface p-0 text-text backdrop:bg-brand-grafite/50 md:hidden"
+      >
+        <div className="px-lg pt-md pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
+          <span aria-hidden className="mx-auto block h-1.5 w-10 rounded-pill bg-border" />
+          <div className="mt-lg flex items-center gap-md">
+            <Avatar name={me.professional.name} />
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-body font-semibold">{me.professional.name}</p>
+              <p className="truncate text-body-small text-text-muted">{me.salon.name}</p>
+            </div>
+            <button
+              type="button"
+              aria-label="Fechar"
+              onClick={() => sheet.current?.close()}
+              className={`flex size-10 items-center justify-center rounded-pill bg-surface-alt ${pressable}`}
+            >
+              <Icon name="close" />
+            </button>
+          </div>
+          <ul className="mt-lg divide-y divide-border overflow-hidden rounded-lg border border-border">
+            {MORE_LINKS.map((m) => (
+              <li key={m.href}>
+                <Link
+                  href={m.href}
+                  onClick={() => sheet.current?.close()}
+                  className="flex min-h-14 items-center gap-md px-lg py-md select-none active:bg-surface-alt focus-visible:outline-2 focus-visible:outline-primary"
+                >
+                  <span className="flex size-10 shrink-0 items-center justify-center rounded-md bg-surface-alt text-primary-text">
+                    <Icon name={m.icon} />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-body font-semibold">{m.label}</span>
+                    <span className="block truncate text-body-small text-text-muted">{m.hint}</span>
+                  </span>
+                  <Icon name="right" className="size-5 text-text-muted" />
+                </Link>
+              </li>
+            ))}
+          </ul>
+          <button
+            type="button"
+            onClick={logout}
+            className={`mt-lg flex min-h-12 w-full items-center justify-center gap-sm rounded-pill border border-border text-body font-semibold text-danger ${pressable}`}
           >
-            <Icon name="sparkle" /> {AUTOMATION_PAUSED_MESSAGE}
-            <Icon name="right" className="ml-auto size-5" />
-          </Link>
-        )}
-        {children}
-      </main>
+            <Icon name="logout" /> Sair da conta
+          </button>
+        </div>
+      </dialog>
     </div>
   );
 }
