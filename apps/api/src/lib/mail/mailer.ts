@@ -51,7 +51,8 @@ export function velomailTransport(
         },
         // No click tracking: it would rewrite the links, and the confirmation link carries a token.
         body: JSON.stringify({
-          from: config.MAIL_FROM,
+          // Velomail's send route takes a bare address; the display name is a setting of the Velomail account.
+          from: /<([^>]+)>/.exec(config.MAIL_FROM)?.[1] ?? config.MAIL_FROM,
           reply_to: config.MAIL_REPLY_TO,
           to: mail.to,
           subject: mail.subject,

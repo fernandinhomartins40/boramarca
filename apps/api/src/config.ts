@@ -76,7 +76,7 @@ const Env = z.object({
   /** Transactional e-mail (lib/mail). Without the key mails are only logged. */
   VELOMAIL_API_URL: z.url().default('https://www.velomail.com.br/api/emails/send'),
   VELOMAIL_API_KEY: z.string().min(1).optional(),
-  MAIL_FROM: z.string().min(3).default('Bora Marca <nao-responda@boramarca.com.br>'),
+  MAIL_FROM: z.string().min(3).default('nao-responda@boramarca.com.br'),
   MAIL_REPLY_TO: z.email().default('contato@boramarca.com.br'),
   /** Team inbox for new site leads/contact messages; unset = no notice. */
   MAIL_OPS_TO: z.email().optional(),

@@ -118,7 +118,7 @@ describe('Velomail transport', () => {
     expect(url).toBe('https://www.velomail.com.br/api/emails/send');
     expect((init!.headers as Record<string, string>).authorization).toBe('Bearer chave');
     expect(JSON.parse(String(init!.body))).toEqual({
-      from: 'Bora Marca <nao-responda@boramarca.com.br>',
+      from: 'nao-responda@boramarca.com.br',
       reply_to: 'contato@boramarca.com.br',
       to: 'ana@exemplo.com',
       subject: 'Oi',
@@ -126,6 +126,10 @@ describe('Velomail transport', () => {
       text: 'segredo',
       tracking_enabled: false,
     });
+    // A "Name <address>" MAIL_FROM still sends the bare address (Velomail rejects the other form).
+    const named = testConfig({ VELOMAIL_API_KEY: 'chave', MAIL_FROM: 'Bora Marca <oi@boramarca.com.br>' });
+    await velomailTransport(named, log, fetchImpl).deliver(mail);
+    expect(JSON.parse(String(fetchImpl.mock.calls[1]![1]!.body)).from).toBe('oi@boramarca.com.br');
     fetchImpl.mockResolvedValueOnce(new Response('quota', { status: 429 }));
     await expect(velomailTransport(config, log, fetchImpl).deliver(mail)).rejects.toThrow('429');
   });
